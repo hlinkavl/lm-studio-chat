@@ -590,7 +590,7 @@
         <div class="sysprompt-header">
             <div>
                 <div>system prompt — sent at the start of every conversation</div>
-                <div style="font-size:9px;color:var(--muted);opacity:0.7;margin-top:2px">workspace context + MCP tool list are appended automatically at runtime</div>
+                <div style="font-size:9px;color:var(--muted);opacity:0.7;margin-top:2px">workspace tree + connected MCP tools are appended automatically — everything above is yours to edit</div>
             </div>
             <div style="display:flex;gap:6px;align-items:center">
                 <button class="sysprompt-save" id="sysPromptSave">save &amp; close</button>
@@ -619,13 +619,12 @@
   "mcpServers": {
     "my-server": {
       "command": "npx",
-      "args": ["-y", "@scope/server-pkg"],
-      "instructions": "Optional context injected into the system prompt — e.g. schema notes, usage rules, caveats."
+      "args": ["-y", "@scope/server-pkg"]
     }
   }
 }</pre>
                 <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.6">
-                    For SSE: use <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">"url": "http://..."</code> instead of command/args. <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">instructions</code> is optional — the model sees it before the tool list for that server. Save the file — changes apply automatically.
+                    For SSE: use <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">"url": "http://..."</code> instead of command/args. Save the file — changes apply automatically.
                 </div>
             </div>
         </div>
@@ -636,11 +635,12 @@
         <div class="welcome" id="welcome">
             <div class="welcome-title">~ lm-studio-chat</div>
             <div style="margin-bottom:6px">An agentic coding assistant that connects VS Code to your local <strong style="color:var(--prompt)">LM Studio</strong> instance. The model has full read/write access to your workspace and can read files, propose edits, run shell commands, and call external tools via MCP — all without leaving the editor.</div>
-            <div style="margin-bottom:4px">Permission modes (<strong style="color:var(--ai)">ask</strong> / <strong style="color:var(--user)">edit</strong>):</div>
             <div style="color:var(--muted);font-size:11px;line-height:1.7">
                 <span style="color:var(--ai)">ask</span> — every file write or command requires your <strong>Accept</strong> or <strong>Deny</strong>. Denied actions are remembered for the session.<br>
                 <span style="color:var(--user)">edit</span> — changes are applied immediately with a diff shown afterwards.<br>
-                <span style="color:var(--ai)">prompt</span> — edit the system prompt sent to the model; workspace context and MCP tools are appended automatically.<br>
+                <span style="color:var(--ai)">prompt</span> — edit the system prompt sent to the model; workspace context and MCP tools are appended automatically.
+            </div>
+            <div style="color:var(--muted);font-size:11px;line-height:1.7;margin-top:8px">
                 <span style="color:#f44747">shell</span> &amp; <span style="color:#b5cea8">mcp</span> — enable terminal access or connect MCP servers (databases, APIs) the model can call as tools.
             </div>
         </div>

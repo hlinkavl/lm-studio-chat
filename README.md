@@ -58,15 +58,14 @@ MCP servers are configured via a `mcp.json` file. Open it with:
 Ctrl+Shift+P → LM Studio Chat: Open MCP Config File
 ```
 
-The format is identical to VS Code and Claude Code, with one extension — an optional `instructions` field:
+The format is identical to VS Code and Claude Code:
 
 ```json
 {
   "mcpServers": {
-    "postgres-local": {
+    "my-server": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://..."],
-      "instructions": "Always query information_schema.tables first to discover available tables before writing SQL. Never guess column names — use information_schema.columns to verify structure."
+      "args": ["-y", "@scope/server-pkg"]
     },
     "my-sse-server": {
       "url": "http://localhost:3000/sse"
@@ -75,8 +74,7 @@ The format is identical to VS Code and Claude Code, with one extension — an op
 }
 ```
 
-- `env` — optional object with environment variables for the server process
-- `instructions` — optional string injected into the system prompt before that server's tool list; use it to give the model schema notes, usage rules, or caveats about the server
+Optional `env` object can be added to any server entry for environment variables.
 
 The file is watched — changes apply without restarting VS Code.
 

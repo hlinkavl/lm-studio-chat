@@ -23,7 +23,6 @@ export interface McpServerConfig {
     name: string;
     enabled: boolean;
     config: McpStdioConfig | McpSseConfig;
-    instructions?: string;  // injected into system prompt before this server's tool list
 }
 
 // ── Runtime types (not persisted) ────────────────────────────────────────────
@@ -110,8 +109,7 @@ export class McpManager {
                     : { transport: 'stdio', command: String(e.command ?? ''),
                         args: Array.isArray(e.args) ? e.args.map(String) : [],
                         env:  e.env && typeof e.env === 'object' ? e.env as Record<string,string> : undefined };
-                const instructions = typeof e.instructions === 'string' ? e.instructions.trim() : undefined;
-                return { name, enabled: true, config: cfg, ...(instructions ? { instructions } : {}) };
+                return { name, enabled: true, config: cfg };
             }).filter(c => c.config.transport === 'sse' || (c.config as McpStdioConfig).command);
         } catch {
             return [];
@@ -282,9 +280,6 @@ export class McpManager {
 
         for (const s of connected) {
             lines.push('');
-            if (s.config.instructions) {
-                lines.push(`[${s.config.name}] Instructions: ${s.config.instructions}`);
-            }
             for (const t of s.tools) {
                 lines.push('');
                 lines.push(`Server: ${s.config.name}  Tool: ${t.name}`);
