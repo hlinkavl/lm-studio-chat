@@ -423,7 +423,7 @@
             display: flex; align-items: center; gap: 4px; flex-shrink: 0;
         }
         .group-label {
-            font-size: 9px; color: var(--muted); opacity: 0.45;
+            font-size: 9px; color: #8a8a8a;
             letter-spacing: 0.05em; text-transform: uppercase;
             user-select: none; margin-right: 2px; flex-shrink: 0;
         }
@@ -553,7 +553,7 @@
                     </button>
                 </div>
 
-                <div class="topbar-divider"></div>
+                <div class="topbar-divider" style="margin:0 14px"></div>
 
                 <!-- tools: shell + mcp -->
                 <div class="topbar-group">
@@ -639,8 +639,8 @@
             <div style="color:var(--muted);font-size:11px;line-height:1.7">
                 <span style="color:var(--ai)">ask</span> — every file write or command requires your <strong>Accept</strong> or <strong>Deny</strong>. Denied actions are remembered for the session.<br>
                 <span style="color:var(--user)">edit</span> — changes are applied immediately with a diff shown afterwards.<br>
-                <span style="color:var(--muted)">shell &amp; mcp</span> — enable terminal access or connect MCP servers (databases, APIs) the model can call as tools.<br>
-                <span style="color:var(--muted)">prompt</span> — edit the system prompt sent to the model; workspace context and MCP tools are appended automatically.
+                <span style="color:#f44747">shell</span> &amp; <span style="color:#b5cea8">mcp</span> — enable terminal access or connect MCP servers (databases, APIs) the model can call as tools.<br>
+                <span style="color:var(--ai)">prompt</span> — edit the system prompt sent to the model; workspace context and MCP tools are appended automatically.
             </div>
         </div>
     </div>
@@ -746,6 +746,10 @@
             .replace(/<rename_file\b[^>]*\/>/g, '')
             .replace(/<rename_file\b[^>]*>\s*<\/rename_file>/g, '')
             .replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, '')
+            // Strip native model tool-call formats so raw XML never shows in chat
+            .replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call>/g, '')
+            .replace(/\[TOOL_CALLS\][\s\S]*?(?=\n\n|$)/g, '')
+            .replace(/<\|tool_call\|>[\s\S]*?(?=<\|[^|]+\||$)/g, '')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
     }

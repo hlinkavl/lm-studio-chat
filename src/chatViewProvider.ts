@@ -500,15 +500,33 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                            response.includes('<list_dir')  || response.includes('<search_files') ||
                            response.includes('<delete_file') || response.includes('<create_dir') ||
                            response.includes('<rename_file') || response.includes('<mcp_call');
-        if (!hasToolTag) { return; }
+
+        // Detect native model tool-call formats (wrong format — model ignoring instructions)
+        const hasNativeFormat = response.includes('<tool_call') || response.includes('[TOOL_CALLS]') ||
+                                response.includes('<|tool_call|>') || response.includes('"function_call"');
+
+        if (!hasToolTag && !hasNativeFormat) { return; }
+
+        // If the model used a native format instead of our XML tags, send a correction and retry
+        if (hasNativeFormat && !hasToolTag) {
+            const correction = `[SYSTEM — TOOL FORMAT ERROR]\nYou used an unsupported tool-calling format (<tool_call>, [TOOL_CALLS], or similar).\nDo NOT use <tool_call> or any other format. Use ONLY the exact XML tags from your instructions:\n  <mcp_call server="SERVER_NAME" tool="TOOL_NAME">{"arg":"val"}</mcp_call>\nPlease retry your tool call using the correct format.`;
+            this.conversationHistory.push({ role: 'user', content: correction });
+            this.saveHistory();
+            this.webviewView.webview.postMessage({
+                type: 'systemMessage',
+                text: 'Model used wrong tool format — correcting and retrying…',
+            });
+            this.continueAfterToolResult();
+            return;
+        }
 
         const tools = parseToolCalls(response);
 
         if (tools.length === 0) {
-            // Tags were present but regex didn't match — show a warning with context
+            // Tags were present but regex didn't match
             this.webviewView.webview.postMessage({
                 type: 'systemMessage',
-                text: 'Tool tag detected but could not be parsed. Ensure the format is: <write_file path="relative/path">…</write_file>',
+                text: 'Tool tag detected but could not be parsed — check tag format and attributes.',
             });
             return;
         }

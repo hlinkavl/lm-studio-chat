@@ -263,6 +263,9 @@ export class McpManager {
 
         const lines: string[] = [
             '',
+            'IMPORTANT: Do NOT use <tool_call>, function_call, [TOOL_CALLS], <|tool_call|>, or any other tool-calling format.',
+            'Use ONLY the exact XML tag shown below — no exceptions.',
+            '',
             'MCP (Model Context Protocol) tools are available. Call them using:',
             '<mcp_call server="SERVER_NAME" tool="TOOL_NAME">{"arg1":"value1"}</mcp_call>',
             'The arguments must be a valid JSON object matching the tool\'s parameters.',

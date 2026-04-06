@@ -23937,6 +23937,9 @@ var McpManager = class {
     );
     const lines = [
       "",
+      "IMPORTANT: Do NOT use <tool_call>, function_call, [TOOL_CALLS], <|tool_call|>, or any other tool-calling format.",
+      "Use ONLY the exact XML tag shown below \u2014 no exceptions.",
+      "",
       "MCP (Model Context Protocol) tools are available. Call them using:",
       '<mcp_call server="SERVER_NAME" tool="TOOL_NAME">{"arg1":"value1"}</mcp_call>',
       "The arguments must be a valid JSON object matching the tool's parameters."
@@ -24423,14 +24426,30 @@ IMPORTANT: Every path shown in the tree above exists. NEVER say a file or direct
       return;
     }
     const hasToolTag = response.includes("<write_file") || response.includes("<run_bash>") || response.includes("<read_file") || response.includes("<patch_file") || response.includes("<list_dir") || response.includes("<search_files") || response.includes("<delete_file") || response.includes("<create_dir") || response.includes("<rename_file") || response.includes("<mcp_call");
-    if (!hasToolTag) {
+    const hasNativeFormat = response.includes("<tool_call") || response.includes("[TOOL_CALLS]") || response.includes("<|tool_call|>") || response.includes('"function_call"');
+    if (!hasToolTag && !hasNativeFormat) {
+      return;
+    }
+    if (hasNativeFormat && !hasToolTag) {
+      const correction = `[SYSTEM \u2014 TOOL FORMAT ERROR]
+You used an unsupported tool-calling format (<tool_call>, [TOOL_CALLS], or similar).
+Do NOT use <tool_call> or any other format. Use ONLY the exact XML tags from your instructions:
+  <mcp_call server="SERVER_NAME" tool="TOOL_NAME">{"arg":"val"}</mcp_call>
+Please retry your tool call using the correct format.`;
+      this.conversationHistory.push({ role: "user", content: correction });
+      this.saveHistory();
+      this.webviewView.webview.postMessage({
+        type: "systemMessage",
+        text: "Model used wrong tool format \u2014 correcting and retrying\u2026"
+      });
+      this.continueAfterToolResult();
       return;
     }
     const tools = parseToolCalls(response);
     if (tools.length === 0) {
       this.webviewView.webview.postMessage({
         type: "systemMessage",
-        text: 'Tool tag detected but could not be parsed. Ensure the format is: <write_file path="relative/path">\u2026</write_file>'
+        text: "Tool tag detected but could not be parsed \u2014 check tag format and attributes."
       });
       return;
     }
