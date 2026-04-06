@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Dark terminal background -->
+  <rect width="128" height="128" rx="22" fill="#0d0d0d"/>
+  <!-- Prompt chevron > -->
+  <polyline points="24,40 54,64 24,88"
+    fill="none" stroke="#f59e0b" stroke-width="11"
+    stroke-linecap="square" stroke-linejoin="miter"/>
+  <!-- Blinking cursor block _ -->
+  <rect x="64" y="78" width="36" height="9" rx="1" fill="#f59e0b"/>
+</svg>

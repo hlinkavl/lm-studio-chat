@@ -1,0 +1,4 @@
+node_modules/
+out/*.js.map
+*.vsix
+node_modules
