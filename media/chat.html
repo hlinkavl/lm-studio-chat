@@ -405,12 +405,20 @@
             background: rgba(156,220,254,0.08);
         }
 
-        /* Divider between config buttons and new-chat */
+        /* ── Topbar groups ── */
         .topbar-divider {
             width: 1px; height: 16px;
             background: var(--border);
             flex-shrink: 0;
-            margin: 0 2px;
+            margin: 0 4px;
+        }
+        .topbar-group {
+            display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+        }
+        .group-label {
+            font-size: 9px; color: var(--muted); opacity: 0.5;
+            letter-spacing: 0.04em; user-select: none;
+            margin-right: 1px; flex-shrink: 0;
         }
 
         /* ── MCP button ── */
@@ -468,36 +476,14 @@
         .mcp-server-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
         .mcp-server-tools { font-size: 10px; color: var(--prompt); margin-top: 2px; }
         .mcp-server-error { font-size: 10px; color: var(--error); margin-top: 2px; word-break: break-all; }
-        .mcp-remove-btn {
-            font-family: var(--font); font-size: 10px; flex-shrink: 0;
-            background: transparent; border: 1px solid var(--border);
-            color: var(--muted); border-radius: 2px; padding: 1px 6px; cursor: pointer;
-        }
-        .mcp-remove-btn:hover { color: var(--error); border-color: rgba(244,135,113,0.4); }
-
-        .mcp-add-section { padding: 10px 0; }
+.mcp-add-section { padding: 10px 0; }
         .mcp-add-title { font-size: 10px; color: var(--muted); margin-bottom: 8px; }
-        .mcp-form-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
-        .mcp-form-row label { font-size: 10px; color: var(--muted); }
-        .mcp-form-row input,
-        .mcp-form-row select,
-        .mcp-form-row textarea {
-            background: #1a1a1a; border: 1px solid var(--border); border-radius: 2px;
-            color: var(--fg); font-family: var(--font); font-size: 11px;
-            padding: 3px 6px; outline: none; width: 100%; box-sizing: border-box;
-        }
-        .mcp-form-row input:focus,
-        .mcp-form-row select:focus,
-        .mcp-form-row textarea:focus { border-color: var(--muted); }
-        .mcp-form-row select option { background: var(--surface); }
-        .mcp-form-row textarea { resize: vertical; }
         .mcp-btn-add {
             font-family: var(--font); font-size: 10px;
             background: rgba(78,201,176,0.1); border: 1px solid rgba(78,201,176,0.4);
-            color: var(--prompt); border-radius: 2px; padding: 2px 10px; cursor: pointer;
+            color: var(--prompt); border-radius: 2px; padding: 3px 12px; cursor: pointer;
         }
         .mcp-btn-add:hover { background: rgba(78,201,176,0.2); }
-        .mcp-form-error { font-size: 10px; color: var(--error); margin-top: 4px; display: none; }
     </style>
 </head>
 <body>
@@ -506,7 +492,7 @@
     <!-- ── Top Bar ── -->
     <div class="topbar">
         <div class="topbar-row">
-            <!-- Left: connection & context -->
+            <!-- Status: server, model, workspace -->
             <button class="btn" id="urlChip" title="Change server URL">
                 <span class="dot checking" id="statusDot"></span>
                 <span id="urlText">127.0.0.1:1234</span>
@@ -518,14 +504,30 @@
                 <span id="workspaceText">workspace</span>
             </button>
 
-            <!-- Right: actions -->
-            <div class="topbar-right">
+            <div class="topbar-divider"></div>
+
+            <!-- Permissions: mode + prompt editor -->
+            <div class="topbar-group">
+                <span class="group-label">perms</span>
+                <button class="btn btn-permission perm-ask" id="permissionChip" title="Permission mode — click to toggle">
+                    <span id="permissionText">ask</span>
+                </button>
                 <button class="btn btn-sysprompt" id="sysPromptBtn" title="Edit system prompt">
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
                          stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0">
                         <path d="M11 2l3 3-8 8H3v-3L11 2z"/>
                     </svg>
                     prompt
+                </button>
+            </div>
+
+            <div class="topbar-divider"></div>
+
+            <!-- Tools: shell + mcp -->
+            <div class="topbar-group">
+                <span class="group-label">tools</span>
+                <button class="btn btn-shell" id="shellChip" title="Shell execution OFF — commands are NOT sandboxed to the workspace — click to enable">
+                    shell
                 </button>
                 <button class="btn btn-mcp" id="mcpBtn" title="Configure MCP servers">
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -535,24 +537,20 @@
                     </svg>
                     mcp<span class="mcp-badge" id="mcpBadge"></span>
                 </button>
-                <button class="btn btn-shell" id="shellChip" title="Shell execution OFF — commands are NOT sandboxed to the workspace — click to enable">
-                    shell
-                </button>
-                <button class="btn btn-permission perm-ask" id="permissionChip" title="Permission mode — click to toggle">
-                    <span id="permissionText">ask</span>
-                </button>
-                <div class="topbar-divider"></div>
-                <button class="btn btn-new" id="newChatBtn" title="New conversation">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
-                         stroke-linecap="round" style="width:11px;height:11px">
-                        <line x1="8" y1="2" x2="8" y2="14"/>
-                        <line x1="2" y1="8" x2="14" y2="8"/>
-                    </svg>
-                    new
-                </button>
             </div>
-        </div>
 
+            <div class="topbar-divider"></div>
+
+            <!-- New chat -->
+            <button class="btn btn-new" id="newChatBtn" title="New conversation">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" style="width:11px;height:11px">
+                    <line x1="8" y1="2" x2="8" y2="14"/>
+                    <line x1="2" y1="8" x2="14" y2="8"/>
+                </svg>
+                new
+            </button>
+        </div>
     </div>
 
     <!-- ── System prompt editor ── -->
@@ -567,7 +565,7 @@
         <textarea id="sysPromptArea" spellcheck="false"></textarea>
     </div>
 
-    <!-- ── MCP server config ── -->
+    <!-- ── MCP server panel ── -->
     <div class="mcp-wrap" id="mcpWrap">
         <div class="mcp-header">
             <span class="mcp-header-title">MCP servers</span>
@@ -577,42 +575,11 @@
         <div class="mcp-body" id="mcpBody">
             <div id="mcpServerList"></div>
             <div class="mcp-add-section">
-                <div class="mcp-add-title">add server</div>
-                <div class="mcp-form-row">
-                    <label>name (unique identifier)</label>
-                    <input id="mcpAddName" placeholder="e.g. postgres" />
+                <div class="mcp-add-title">configure servers by editing the config file</div>
+                <button class="mcp-btn-add" id="mcpEditConfigBtn">open mcp.json</button>
+                <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6">
+                    Add servers as a JSON array. Each entry needs a <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">name</code>, <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">enabled</code> flag, and <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">config</code> with transport details. The file is watched — changes apply automatically.
                 </div>
-                <div class="mcp-form-row">
-                    <label>transport</label>
-                    <select id="mcpAddTransport">
-                        <option value="stdio">stdio</option>
-                        <option value="sse">sse</option>
-                    </select>
-                </div>
-                <div id="mcpStdioFields">
-                    <div class="mcp-form-row">
-                        <label>command</label>
-                        <input id="mcpAddCommand" placeholder="e.g. npx" />
-                    </div>
-                    <div class="mcp-form-row">
-                        <label>args (one per line)</label>
-                        <textarea id="mcpAddArgs" rows="2" placeholder="-y&#10;@modelcontextprotocol/server-postgres"></textarea>
-                    </div>
-                    <div class="mcp-form-row">
-                        <label>env (KEY=VALUE, one per line, optional)</label>
-                        <textarea id="mcpAddEnv" rows="2" placeholder="DATABASE_URL=postgresql://user:pass@localhost/db"></textarea>
-                    </div>
-                </div>
-                <div id="mcpSseFields" style="display:none">
-                    <div class="mcp-form-row">
-                        <label>URL</label>
-                        <input id="mcpAddUrl" placeholder="http://localhost:3000/sse" />
-                    </div>
-                </div>
-                <div style="margin-top:6px">
-                    <button class="mcp-btn-add" id="mcpAddBtn">add &amp; connect</button>
-                </div>
-                <div class="mcp-form-error" id="mcpFormError"></div>
             </div>
         </div>
     </div>
@@ -621,11 +588,54 @@
     <div class="messages" id="messages">
         <div class="welcome" id="welcome">
             <div class="welcome-title">~ lm-studio-chat</div>
-            <div style="margin-bottom:6px">Connected to your local <strong style="color:var(--prompt)">LM Studio</strong> instance. The workspace folder is always active — the model can read your files and propose changes.</div>
-            <div style="margin-bottom:4px">Permission modes (<strong style="color:var(--ai)">ask</strong> / <strong style="color:var(--user)">edit</strong>):</div>
-            <div style="color:var(--muted);font-size:11px;line-height:1.7">
-                <span style="color:var(--ai)">ask</span> — every file write or command requires your <strong>Accept</strong> or <strong>Deny</strong>. Denied actions are remembered for the session.<br>
-                <span style="color:var(--user)">edit</span> — changes are applied immediately with a diff shown afterwards.
+            <div style="margin-bottom:14px;line-height:1.7">
+                An agentic coding assistant that connects VS Code to your local <strong style="color:var(--prompt)">LM Studio</strong> instance. The model has full read/write access to your workspace and can read files, propose edits, run shell commands, and call external tools via MCP — all without leaving the editor.
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;line-height:1.6">
+
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--muted);flex-shrink:0;width:72px;text-align:right">● url</span>
+                    <span style="color:var(--fg)">Server endpoint. Click to change the LM Studio address.</span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--muted);flex-shrink:0;width:72px;text-align:right">model</span>
+                    <span style="color:var(--fg)">Active model name. Click to switch to a different loaded model.</span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--prompt);flex-shrink:0;width:72px;text-align:right">workspace</span>
+                    <span style="color:var(--fg)">Always active. The model receives your file tree and workspace path each turn.</span>
+                </div>
+
+                <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--ai);flex-shrink:0;width:72px;text-align:right">ask / edit</span>
+                    <span style="color:var(--fg)"><strong style="color:var(--ai)">ask</strong> — every file change shows a diff requiring Accept or Deny. <strong style="color:var(--user)">edit</strong> — changes apply immediately.</span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--ai);flex-shrink:0;width:72px;text-align:right">prompt</span>
+                    <span style="color:var(--fg)">Opens the system prompt editor. Define the model's role, rules, and behavior.</span>
+                </div>
+
+                <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--muted);flex-shrink:0;width:72px;text-align:right">shell</span>
+                    <span style="color:var(--fg)">Enables bash execution via <code style="background:#2d2d2d;padding:1px 3px;border-radius:2px;font-size:10px">run_bash</code>. Off by default — not sandboxed, commands can access the entire system.</span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <span style="color:#b5cea8;flex-shrink:0;width:72px;text-align:right">mcp</span>
+                    <span style="color:var(--fg)">MCP server panel. Connect external tools (databases, APIs, services) the model can call. Edit <code style="background:#2d2d2d;padding:1px 3px;border-radius:2px;font-size:10px">mcp.json</code> to add servers — changes are picked up automatically.</span>
+                </div>
+
+                <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+
+                <div style="display:flex;gap:8px">
+                    <span style="color:var(--prompt);flex-shrink:0;width:72px;text-align:right">+ new</span>
+                    <span style="color:var(--fg)">Clears the conversation and starts a fresh session.</span>
+                </div>
+
             </div>
         </div>
     </div>
@@ -685,16 +695,7 @@
     const mcpWrap         = document.getElementById('mcpWrap');
     const mcpClose        = document.getElementById('mcpClose');
     const mcpServerList   = document.getElementById('mcpServerList');
-    const mcpAddName      = document.getElementById('mcpAddName');
-    const mcpAddTransport = document.getElementById('mcpAddTransport');
-    const mcpStdioFields  = document.getElementById('mcpStdioFields');
-    const mcpSseFields    = document.getElementById('mcpSseFields');
-    const mcpAddCommand   = document.getElementById('mcpAddCommand');
-    const mcpAddArgs      = document.getElementById('mcpAddArgs');
-    const mcpAddEnv       = document.getElementById('mcpAddEnv');
-    const mcpAddUrl       = document.getElementById('mcpAddUrl');
-    const mcpAddBtn       = document.getElementById('mcpAddBtn');
-    const mcpFormError    = document.getElementById('mcpFormError');
+    const mcpEditConfigBtn = document.getElementById('mcpEditConfigBtn');
     let mcpConfigs        = [];
     let isStreaming       = false;
     let currentBodyEl     = null;
@@ -1107,16 +1108,13 @@
         mcpWrap.classList.contains('open') ? closeMcp() : openMcp();
     });
     mcpClose.addEventListener('click', closeMcp);
-
-    mcpAddTransport.addEventListener('change', () => {
-        const isStdio = mcpAddTransport.value === 'stdio';
-        mcpStdioFields.style.display = isStdio ? '' : 'none';
-        mcpSseFields.style.display   = isStdio ? 'none' : '';
+    mcpEditConfigBtn.addEventListener('click', () => {
+        vscode.postMessage({ type: 'openMcpConfig' });
     });
 
     function renderMcpServers(servers) {
         if (!servers || servers.length === 0) {
-            mcpServerList.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:6px 0 12px">No servers configured.</div>';
+            mcpServerList.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:6px 0 12px">No servers in mcp.json yet. Click "open mcp.json" below to add one.</div>';
             return;
         }
         mcpServerList.innerHTML = servers.map(s => `
@@ -1132,53 +1130,8 @@
                         ? `<div class="mcp-server-error">${escapeHtml(s.errorMessage)}</div>`
                         : ''}
                 </div>
-                <button class="mcp-remove-btn" data-name="${escapeHtml(s.name)}">remove</button>
             </div>
         `).join('');
-        mcpServerList.querySelectorAll('.mcp-remove-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                mcpConfigs = mcpConfigs.filter(c => c.name !== btn.dataset.name);
-                vscode.postMessage({ type: 'saveMcpConfig', configs: mcpConfigs });
-            });
-        });
-    }
-
-    mcpAddBtn.addEventListener('click', () => {
-        mcpFormError.style.display = 'none';
-        const name = mcpAddName.value.trim();
-        if (!name) { showMcpError('Name is required'); return; }
-        if (mcpConfigs.some(c => c.name === name)) { showMcpError('A server with this name already exists'); return; }
-
-        let transportConfig;
-        if (mcpAddTransport.value === 'stdio') {
-            const command = mcpAddCommand.value.trim();
-            if (!command) { showMcpError('Command is required for stdio transport'); return; }
-            const args = mcpAddArgs.value.split('\n').map(s => s.trim()).filter(Boolean);
-            const envLines = mcpAddEnv.value.split('\n').map(s => s.trim()).filter(Boolean);
-            const env = Object.fromEntries(envLines.map(line => {
-                const idx = line.indexOf('=');
-                return idx === -1 ? [line, ''] : [line.slice(0, idx), line.slice(idx + 1)];
-            }));
-            transportConfig = { transport: 'stdio', command, args, ...(envLines.length ? { env } : {}) };
-        } else {
-            const url = mcpAddUrl.value.trim();
-            if (!url) { showMcpError('URL is required for SSE transport'); return; }
-            try { new URL(url); } catch { showMcpError('Invalid URL'); return; }
-            transportConfig = { transport: 'sse', url };
-        }
-
-        mcpConfigs = [...mcpConfigs, { name, enabled: true, config: transportConfig }];
-        vscode.postMessage({ type: 'saveMcpConfig', configs: mcpConfigs });
-        mcpAddName.value = '';
-        mcpAddCommand.value = '';
-        mcpAddArgs.value = '';
-        mcpAddEnv.value = '';
-        mcpAddUrl.value = '';
-    });
-
-    function showMcpError(msg) {
-        mcpFormError.textContent = msg;
-        mcpFormError.style.display = '';
     }
 
     // ── Messages from extension ───────────────────────────────────────────────

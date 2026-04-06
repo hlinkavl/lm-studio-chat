@@ -122,6 +122,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     this.sendMcpStatus();
                     break;
 
+                case 'openMcpConfig': {
+                    const configPath = this.mcpManager.getConfigFilePath();
+                    // Create the file with an empty array if it doesn't exist yet
+                    const fs = await import('fs');
+                    const path = await import('path');
+                    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+                    if (!fs.existsSync(configPath)) {
+                        fs.writeFileSync(configPath, '[]', 'utf-8');
+                    }
+                    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(configPath));
+                    await vscode.window.showTextDocument(doc, { preview: false });
+                    break;
+                }
+
                 case 'getMcpStatus':
                     this.sendMcpStatus();
                     break;
@@ -419,8 +433,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             systemPrompt  += `\n\nCurrent workspace: ${wsPath}\n\nFile tree (use these exact paths in tool calls):\n${tree}\n\nIMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist — use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.${shellNote}`;
         }
 
-        const mcpBlock = this.mcpManager.getToolsSystemPromptBlock();
-        if (mcpBlock) { systemPrompt += mcpBlock; }
+        systemPrompt += this.mcpManager.getToolsSystemPromptBlock();
 
         const messages: ChatMessage[] = [];
         if (systemPrompt) {
@@ -912,8 +925,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             systemPrompt  += `\n\nCurrent workspace: ${wsPath}\n\nFile tree (use these exact paths in tool calls):\n${tree}\n\nIMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist — use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.${shellNote}`;
         }
 
-        const mcpBlock2 = this.mcpManager.getToolsSystemPromptBlock();
-        if (mcpBlock2) { systemPrompt += mcpBlock2; }
+        systemPrompt += this.mcpManager.getToolsSystemPromptBlock();
 
         const messages: ChatMessage[] = [];
         if (systemPrompt) {

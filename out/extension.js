@@ -3223,8 +3223,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path4) {
-      let input = path4;
+    function removeDotSegments(path5) {
+      let input = path5;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3423,8 +3423,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path4, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
+        const [path5, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6786,12 +6786,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs2, exportName) {
+    function addFormats(ajv, list, fs3, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs2[f]);
+        ajv.addFormat(f, fs3[f]);
     }
     module2.exports = exports2 = formatsPlugin;
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -6804,8 +6804,8 @@ var require_windows = __commonJS({
   "node_modules/isexe/windows.js"(exports2, module2) {
     module2.exports = isexe;
     isexe.sync = sync;
-    var fs2 = require("fs");
-    function checkPathExt(path4, options) {
+    var fs3 = require("fs");
+    function checkPathExt(path5, options) {
       var pathext = options.pathExt !== void 0 ? options.pathExt : process.env.PATHEXT;
       if (!pathext) {
         return true;
@@ -6816,25 +6816,25 @@ var require_windows = __commonJS({
       }
       for (var i = 0; i < pathext.length; i++) {
         var p = pathext[i].toLowerCase();
-        if (p && path4.substr(-p.length).toLowerCase() === p) {
+        if (p && path5.substr(-p.length).toLowerCase() === p) {
           return true;
         }
       }
       return false;
     }
-    function checkStat(stat, path4, options) {
+    function checkStat(stat, path5, options) {
       if (!stat.isSymbolicLink() && !stat.isFile()) {
         return false;
       }
-      return checkPathExt(path4, options);
+      return checkPathExt(path5, options);
     }
-    function isexe(path4, options, cb) {
-      fs2.stat(path4, function(er, stat) {
-        cb(er, er ? false : checkStat(stat, path4, options));
+    function isexe(path5, options, cb) {
+      fs3.stat(path5, function(er, stat) {
+        cb(er, er ? false : checkStat(stat, path5, options));
       });
     }
-    function sync(path4, options) {
-      return checkStat(fs2.statSync(path4), path4, options);
+    function sync(path5, options) {
+      return checkStat(fs3.statSync(path5), path5, options);
     }
   }
 });
@@ -6844,14 +6844,14 @@ var require_mode = __commonJS({
   "node_modules/isexe/mode.js"(exports2, module2) {
     module2.exports = isexe;
     isexe.sync = sync;
-    var fs2 = require("fs");
-    function isexe(path4, options, cb) {
-      fs2.stat(path4, function(er, stat) {
+    var fs3 = require("fs");
+    function isexe(path5, options, cb) {
+      fs3.stat(path5, function(er, stat) {
         cb(er, er ? false : checkStat(stat, options));
       });
     }
-    function sync(path4, options) {
-      return checkStat(fs2.statSync(path4), options);
+    function sync(path5, options) {
+      return checkStat(fs3.statSync(path5), options);
     }
     function checkStat(stat, options) {
       return stat.isFile() && checkMode(stat, options);
@@ -6875,7 +6875,7 @@ var require_mode = __commonJS({
 // node_modules/isexe/index.js
 var require_isexe = __commonJS({
   "node_modules/isexe/index.js"(exports2, module2) {
-    var fs2 = require("fs");
+    var fs3 = require("fs");
     var core;
     if (process.platform === "win32" || global.TESTING_WINDOWS) {
       core = require_windows();
@@ -6884,7 +6884,7 @@ var require_isexe = __commonJS({
     }
     module2.exports = isexe;
     isexe.sync = sync;
-    function isexe(path4, options, cb) {
+    function isexe(path5, options, cb) {
       if (typeof options === "function") {
         cb = options;
         options = {};
@@ -6894,7 +6894,7 @@ var require_isexe = __commonJS({
           throw new TypeError("callback not provided");
         }
         return new Promise(function(resolve, reject) {
-          isexe(path4, options || {}, function(er, is) {
+          isexe(path5, options || {}, function(er, is) {
             if (er) {
               reject(er);
             } else {
@@ -6903,7 +6903,7 @@ var require_isexe = __commonJS({
           });
         });
       }
-      core(path4, options || {}, function(er, is) {
+      core(path5, options || {}, function(er, is) {
         if (er) {
           if (er.code === "EACCES" || options && options.ignoreErrors) {
             er = null;
@@ -6913,9 +6913,9 @@ var require_isexe = __commonJS({
         cb(er, is);
       });
     }
-    function sync(path4, options) {
+    function sync(path5, options) {
       try {
-        return core.sync(path4, options || {});
+        return core.sync(path5, options || {});
       } catch (er) {
         if (options && options.ignoreErrors || er.code === "EACCES") {
           return false;
@@ -6931,7 +6931,7 @@ var require_isexe = __commonJS({
 var require_which = __commonJS({
   "node_modules/which/which.js"(exports2, module2) {
     var isWindows = process.platform === "win32" || process.env.OSTYPE === "cygwin" || process.env.OSTYPE === "msys";
-    var path4 = require("path");
+    var path5 = require("path");
     var COLON = isWindows ? ";" : ":";
     var isexe = require_isexe();
     var getNotFoundError = (cmd) => Object.assign(new Error(`not found: ${cmd}`), { code: "ENOENT" });
@@ -6969,7 +6969,7 @@ var require_which = __commonJS({
           return opt.all && found.length ? resolve(found) : reject(getNotFoundError(cmd));
         const ppRaw = pathEnv[i];
         const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw;
-        const pCmd = path4.join(pathPart, cmd);
+        const pCmd = path5.join(pathPart, cmd);
         const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd : pCmd;
         resolve(subStep(p, i, 0));
       });
@@ -6996,7 +6996,7 @@ var require_which = __commonJS({
       for (let i = 0; i < pathEnv.length; i++) {
         const ppRaw = pathEnv[i];
         const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw;
-        const pCmd = path4.join(pathPart, cmd);
+        const pCmd = path5.join(pathPart, cmd);
         const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd : pCmd;
         for (let j = 0; j < pathExt.length; j++) {
           const cur = p + pathExt[j];
@@ -7044,7 +7044,7 @@ var require_path_key = __commonJS({
 var require_resolveCommand = __commonJS({
   "node_modules/cross-spawn/lib/util/resolveCommand.js"(exports2, module2) {
     "use strict";
-    var path4 = require("path");
+    var path5 = require("path");
     var which = require_which();
     var getPathKey = require_path_key();
     function resolveCommandAttempt(parsed, withoutPathExt) {
@@ -7062,7 +7062,7 @@ var require_resolveCommand = __commonJS({
       try {
         resolved = which.sync(parsed.command, {
           path: env[getPathKey({ env })],
-          pathExt: withoutPathExt ? path4.delimiter : void 0
+          pathExt: withoutPathExt ? path5.delimiter : void 0
         });
       } catch (e) {
       } finally {
@@ -7071,7 +7071,7 @@ var require_resolveCommand = __commonJS({
         }
       }
       if (resolved) {
-        resolved = path4.resolve(hasCustomCwd ? parsed.options.cwd : "", resolved);
+        resolved = path5.resolve(hasCustomCwd ? parsed.options.cwd : "", resolved);
       }
       return resolved;
     }
@@ -7125,8 +7125,8 @@ var require_shebang_command = __commonJS({
       if (!match) {
         return null;
       }
-      const [path4, argument] = match[0].replace(/#! ?/, "").split(" ");
-      const binary = path4.split("/").pop();
+      const [path5, argument] = match[0].replace(/#! ?/, "").split(" ");
+      const binary = path5.split("/").pop();
       if (binary === "env") {
         return argument;
       }
@@ -7139,16 +7139,16 @@ var require_shebang_command = __commonJS({
 var require_readShebang = __commonJS({
   "node_modules/cross-spawn/lib/util/readShebang.js"(exports2, module2) {
     "use strict";
-    var fs2 = require("fs");
+    var fs3 = require("fs");
     var shebangCommand = require_shebang_command();
     function readShebang(command) {
       const size = 150;
       const buffer = Buffer.alloc(size);
       let fd;
       try {
-        fd = fs2.openSync(command, "r");
-        fs2.readSync(fd, buffer, 0, size, 0);
-        fs2.closeSync(fd);
+        fd = fs3.openSync(command, "r");
+        fs3.readSync(fd, buffer, 0, size, 0);
+        fs3.closeSync(fd);
       } catch (e) {
       }
       return shebangCommand(buffer.toString());
@@ -7161,7 +7161,7 @@ var require_readShebang = __commonJS({
 var require_parse = __commonJS({
   "node_modules/cross-spawn/lib/parse.js"(exports2, module2) {
     "use strict";
-    var path4 = require("path");
+    var path5 = require("path");
     var resolveCommand = require_resolveCommand();
     var escape2 = require_escape();
     var readShebang = require_readShebang();
@@ -7186,7 +7186,7 @@ var require_parse = __commonJS({
       const needsShell = !isExecutableRegExp.test(commandFile);
       if (parsed.options.forceShell || needsShell) {
         const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(commandFile);
-        parsed.command = path4.normalize(parsed.command);
+        parsed.command = path5.normalize(parsed.command);
         parsed.command = escape2.command(parsed.command);
         parsed.args = parsed.args.map((arg) => escape2.argument(arg, needsDoubleEscapeMetaChars));
         const shellCommand = [parsed.command].concat(parsed.args).join(" ");
@@ -7303,12 +7303,12 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode5 = __toESM(require("vscode"));
+var vscode6 = __toESM(require("vscode"));
 
 // src/chatViewProvider.ts
-var vscode4 = __toESM(require("vscode"));
-var fs = __toESM(require("fs"));
-var path3 = __toESM(require("path"));
+var vscode5 = __toESM(require("vscode"));
+var fs2 = __toESM(require("fs"));
+var path4 = __toESM(require("path"));
 var crypto2 = __toESM(require("crypto"));
 
 // src/lmStudioClient.ts
@@ -7983,6 +7983,11 @@ function collapseContext(ops, ctx) {
   return result;
 }
 
+// src/mcpManager.ts
+var vscode4 = __toESM(require("vscode"));
+var fs = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
+
 // node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
@@ -8342,8 +8347,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -8458,11 +8463,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path4, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path4;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -12108,10 +12113,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -12494,11 +12499,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -23751,26 +23756,64 @@ var McpManager = class {
     this.context = context;
     this.states = /* @__PURE__ */ new Map();
     this.clients = /* @__PURE__ */ new Map();
+    this.configPath = path3.join(context.globalStorageUri.fsPath, "mcp.json");
   }
   async initialize() {
-    const configs = this.getServerConfigs();
-    await Promise.allSettled(
-      configs.filter((c) => c.enabled).map((c) => this.connectServer(c))
-    );
+    fs.mkdirSync(path3.dirname(this.configPath), { recursive: true });
+    const legacy = this.context.globalState.get("mcpServers");
+    if (legacy && legacy.length > 0 && !fs.existsSync(this.configPath)) {
+      this.writeConfigFile(legacy);
+      await this.context.globalState.update("mcpServers", void 0);
+    }
+    const watchDir = vscode4.Uri.file(path3.dirname(this.configPath));
+    const pattern = new vscode4.RelativePattern(watchDir, "mcp.json");
+    this.watcher = vscode4.workspace.createFileSystemWatcher(pattern);
+    const scheduleReload = () => {
+      clearTimeout(this.reloadDebounce);
+      this.reloadDebounce = setTimeout(() => this.reloadFromFile(), 400);
+    };
+    this.watcher.onDidChange(scheduleReload);
+    this.watcher.onDidCreate(scheduleReload);
+    this.context.subscriptions.push(this.watcher);
+    const configs = this.readConfigFile();
+    await Promise.allSettled(configs.filter((c) => c.enabled).map((c) => this.connectServer(c)));
   }
   dispose() {
+    clearTimeout(this.reloadDebounce);
     for (const [, client] of this.clients) {
       client.close().catch(() => {
       });
     }
     this.clients.clear();
   }
-  // ── Config management ─────────────────────────────────────────────────────
+  // ── Config file I/O ───────────────────────────────────────────────────────
+  readConfigFile() {
+    try {
+      const raw = fs.readFileSync(this.configPath, "utf-8");
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  writeConfigFile(configs) {
+    fs.mkdirSync(path3.dirname(this.configPath), { recursive: true });
+    fs.writeFileSync(this.configPath, JSON.stringify(configs, null, 2), "utf-8");
+  }
   getServerConfigs() {
-    return this.context.globalState.get("mcpServers", []);
+    return this.readConfigFile();
   }
   async saveServerConfigs(newConfigs) {
-    await this.context.globalState.update("mcpServers", newConfigs);
+    this.writeConfigFile(newConfigs);
+    clearTimeout(this.reloadDebounce);
+    await this.reloadFromFile();
+  }
+  getConfigFilePath() {
+    return this.configPath;
+  }
+  // ── Reload on file change ─────────────────────────────────────────────────
+  async reloadFromFile() {
+    const newConfigs = this.readConfigFile();
     const oldNames = new Set(this.states.keys());
     const newNames = new Set(newConfigs.map((c) => c.name));
     for (const name of oldNames) {
@@ -23779,10 +23822,11 @@ var McpManager = class {
       }
     }
     for (const cfg of newConfigs) {
-      if (!oldNames.has(cfg.name) && cfg.enabled) {
+      if (cfg.enabled && !oldNames.has(cfg.name)) {
         await this.connectServer(cfg);
       }
     }
+    this.notifyChange();
   }
   // ── Connection ────────────────────────────────────────────────────────────
   async connectServer(cfg) {
@@ -23856,17 +23900,17 @@ var McpManager = class {
     const connected = Array.from(this.states.values()).filter(
       (s) => s.status === "connected" && s.tools.length > 0
     );
-    if (connected.length === 0) {
-      return "";
-    }
     const lines = [
       "",
-      "You also have access to MCP (Model Context Protocol) tools from connected servers.",
-      "Call them using:",
+      "MCP (Model Context Protocol) tools are available. Call them using:",
       '<mcp_call server="SERVER_NAME" tool="TOOL_NAME">{"arg1":"value1"}</mcp_call>',
-      "",
-      "Available MCP tools:"
+      "The arguments must be a valid JSON object matching the tool's parameters."
     ];
+    if (connected.length === 0) {
+      lines.push("No MCP servers are currently connected \u2014 the available tools will be listed here once a server is configured and connected.");
+      return lines.join("\n");
+    }
+    lines.push("", "Available MCP tools:");
     for (const s of connected) {
       for (const t of s.tools) {
         lines.push("");
@@ -23894,13 +23938,11 @@ var McpManager = class {
     if (!client) {
       throw new Error(`MCP server "${serverName}" is not connected`);
     }
-    const result = await client.callTool({ name: toolName, arguments: args });
-    return result.content.map((block) => {
-      if (block.type === "text") {
-        return block.text ?? "";
-      }
-      return JSON.stringify(block);
-    }).join("\n");
+    const result = await client.callTool({
+      name: toolName,
+      arguments: args
+    });
+    return result.content.map((block) => block.type === "text" ? block.text ?? "" : JSON.stringify(block)).join("\n");
   }
 };
 
@@ -23946,13 +23988,13 @@ var ChatViewProvider = class {
           await this.handleHealthCheck();
           break;
         case "updateSystemPrompt": {
-          const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
-          await config2.update("systemPrompt", message.text, vscode4.ConfigurationTarget.Global);
+          const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
+          await config2.update("systemPrompt", message.text, vscode5.ConfigurationTarget.Global);
           break;
         }
         case "openSettings":
         case "changeEndpoint":
-          await vscode4.commands.executeCommand("lmStudioChat.setEndpoint");
+          await vscode5.commands.executeCommand("lmStudioChat.setEndpoint");
           break;
         case "selectModel":
           await this.showModelPicker();
@@ -23978,6 +24020,18 @@ var ChatViewProvider = class {
           await this.mcpManager.saveServerConfigs(message.configs);
           this.sendMcpStatus();
           break;
+        case "openMcpConfig": {
+          const configPath = this.mcpManager.getConfigFilePath();
+          const fs3 = await import("fs");
+          const path5 = await import("path");
+          fs3.mkdirSync(path5.dirname(configPath), { recursive: true });
+          if (!fs3.existsSync(configPath)) {
+            fs3.writeFileSync(configPath, "[]", "utf-8");
+          }
+          const doc = await vscode5.workspace.openTextDocument(vscode5.Uri.file(configPath));
+          await vscode5.window.showTextDocument(doc, { preview: false });
+          break;
+        }
         case "getMcpStatus":
           this.sendMcpStatus();
           break;
@@ -24143,7 +24197,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     this.context.globalState.update("chatHistory", this.conversationHistory);
   }
   sendWorkspaceStatus() {
-    const wsFolder = vscode4.workspace.workspaceFolders?.[0];
+    const wsFolder = vscode5.workspace.workspaceFolders?.[0];
     this.webviewView?.webview.postMessage({
       type: "workspaceStatus",
       active: this.workspaceMode,
@@ -24183,14 +24237,14 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     this.isProcessingTools = false;
     this.saveHistory();
     this.webviewView?.webview.postMessage({ type: "reset" });
-    vscode4.window.showInformationMessage("LM Studio Chat: Conversation cleared");
+    vscode5.window.showInformationMessage("LM Studio Chat: Conversation cleared");
   }
   async refreshHealthCheck() {
     await this.handleHealthCheck();
     this.sendCurrentConfig();
   }
   sendCurrentConfig() {
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
     this.webviewView?.webview.postMessage({
       type: "configUpdate",
       endpoint: config2.get("endpoint", "http://127.0.0.1:1234"),
@@ -24201,10 +24255,10 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
   async showModelPicker() {
     const models = await this.client.fetchModels();
     if (models.length === 0) {
-      vscode4.window.showWarningMessage("No models available. Is LM Studio running?");
+      vscode5.window.showWarningMessage("No models available. Is LM Studio running?");
       return;
     }
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
     const currentModel = config2.get("model", "");
     const items = [
       {
@@ -24217,7 +24271,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
         description: m === currentModel ? "(current)" : ""
       }))
     ];
-    const selected = await vscode4.window.showQuickPick(items, {
+    const selected = await vscode5.window.showQuickPick(items, {
       placeHolder: "Select a model to chat with",
       title: "LM Studio \u2014 Select Model"
     });
@@ -24225,15 +24279,15 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
       return;
     }
     const newModel = selected.label.startsWith("$(sparkle)") ? "" : selected.label;
-    await config2.update("model", newModel, vscode4.ConfigurationTarget.Global);
-    vscode4.window.showInformationMessage(`Model set to: ${newModel || "Auto"}`);
+    await config2.update("model", newModel, vscode5.ConfigurationTarget.Global);
+    vscode5.window.showInformationMessage(`Model set to: ${newModel || "Auto"}`);
     await this.handleHealthCheck();
     this.sendCurrentConfig();
   }
   async handleHealthCheck() {
     const health = await this.client.checkHealth();
     if (health.ok && health.models?.length) {
-      const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+      const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
       const configured = config2.get("model", "");
       this.currentModel = configured || health.models[0];
     }
@@ -24250,10 +24304,10 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
       return;
     }
     this.toolIterations = 0;
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
     let systemPrompt = config2.get("systemPrompt", "");
     if (this.workspaceMode) {
-      const wsFolder = vscode4.workspace.workspaceFolders?.[0];
+      const wsFolder = vscode5.workspace.workspaceFolders?.[0];
       const wsPath = wsFolder?.uri.fsPath ?? "(no workspace)";
       const tree = await this.contextProvider.getWorkspaceTree();
       const isWindows = process.platform === "win32";
@@ -24272,10 +24326,7 @@ ${tree}
 
 IMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist \u2014 use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.${shellNote}`;
     }
-    const mcpBlock = this.mcpManager.getToolsSystemPromptBlock();
-    if (mcpBlock) {
-      systemPrompt += mcpBlock;
-    }
+    systemPrompt += this.mcpManager.getToolsSystemPromptBlock();
     const messages = [];
     if (systemPrompt) {
       messages.push({ role: "system", content: systemPrompt });
@@ -24794,7 +24845,7 @@ Error: ${msg}`
   }
   continueAfterToolResult() {
     this.toolIterations++;
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
     const maxIter = config2.get("maxToolIterations", 10);
     if (this.toolIterations >= maxIter) {
       this.webviewView?.webview.postMessage({
@@ -24816,10 +24867,10 @@ Error: ${msg}`
     if (!this.webviewView) {
       return;
     }
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
     let systemPrompt = config2.get("systemPrompt", "");
     if (this.workspaceMode) {
-      const wsFolder = vscode4.workspace.workspaceFolders?.[0];
+      const wsFolder = vscode5.workspace.workspaceFolders?.[0];
       const wsPath = wsFolder?.uri.fsPath ?? "(no workspace)";
       const tree = await this.contextProvider.getWorkspaceTree();
       const isWindows = process.platform === "win32";
@@ -24838,10 +24889,7 @@ ${tree}
 
 IMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist \u2014 use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.${shellNote}`;
     }
-    const mcpBlock2 = this.mcpManager.getToolsSystemPromptBlock();
-    if (mcpBlock2) {
-      systemPrompt += mcpBlock2;
-    }
+    systemPrompt += this.mcpManager.getToolsSystemPromptBlock();
     const messages = [];
     if (systemPrompt) {
       messages.push({ role: "system", content: systemPrompt });
@@ -24897,11 +24945,11 @@ IMPORTANT: Every path shown in the tree above exists. NEVER say a file or direct
   }
   // ── Webview HTML ─────────────────────────────────────────────────────────
   getWebviewContent() {
-    const htmlPath = path3.join(this.extensionUri.fsPath, "media", "chat.html");
+    const htmlPath = path4.join(this.extensionUri.fsPath, "media", "chat.html");
     try {
       const nonce = crypto2.randomBytes(16).toString("hex");
       const cspSource = this.webviewView.webview.cspSource;
-      let html = fs.readFileSync(htmlPath, "utf-8");
+      let html = fs2.readFileSync(htmlPath, "utf-8");
       html = html.replace(/\{NONCE\}/g, nonce);
       html = html.replace(/\{CSP_SOURCE\}/g, cspSource);
       return html;
@@ -24985,22 +25033,22 @@ function diffSearchReplace(search, replace) {
 function activate(context) {
   const provider = new ChatViewProvider(context.extensionUri, context);
   context.subscriptions.push(
-    vscode5.window.registerWebviewViewProvider(
+    vscode6.window.registerWebviewViewProvider(
       "lmStudioChat.chatView",
       provider,
       { webviewOptions: { retainContextWhenHidden: true } }
     )
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.newChat", () => {
+    vscode6.commands.registerCommand("lmStudioChat.newChat", () => {
       provider.resetConversation();
     })
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.setEndpoint", async () => {
-      const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
+    vscode6.commands.registerCommand("lmStudioChat.setEndpoint", async () => {
+      const config2 = vscode6.workspace.getConfiguration("lmStudioChat");
       const current = config2.get("endpoint", "http://127.0.0.1:1234");
-      const newEndpoint = await vscode5.window.showInputBox({
+      const newEndpoint = await vscode6.window.showInputBox({
         prompt: "Enter LM Studio server URL",
         value: current,
         placeHolder: "http://127.0.0.1:1234",
@@ -25017,15 +25065,28 @@ function activate(context) {
         }
       });
       if (newEndpoint && newEndpoint !== current) {
-        await config2.update("endpoint", newEndpoint, vscode5.ConfigurationTarget.Global);
-        vscode5.window.showInformationMessage(`LM Studio endpoint set to: ${newEndpoint}`);
+        await config2.update("endpoint", newEndpoint, vscode6.ConfigurationTarget.Global);
+        vscode6.window.showInformationMessage(`LM Studio endpoint set to: ${newEndpoint}`);
         provider.refreshHealthCheck();
       }
     })
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.selectModel", async () => {
+    vscode6.commands.registerCommand("lmStudioChat.selectModel", async () => {
       await provider.showModelPicker();
+    })
+  );
+  context.subscriptions.push(
+    vscode6.commands.registerCommand("lmStudioChat.openMcpConfig", async () => {
+      const fs3 = await import("fs");
+      const path5 = await import("path");
+      const configPath = provider.mcpManager.getConfigFilePath();
+      fs3.mkdirSync(path5.dirname(configPath), { recursive: true });
+      if (!fs3.existsSync(configPath)) {
+        fs3.writeFileSync(configPath, "[]", "utf-8");
+      }
+      const doc = await vscode6.workspace.openTextDocument(vscode6.Uri.file(configPath));
+      await vscode6.window.showTextDocument(doc, { preview: false });
     })
   );
   console.log("LM Studio Chat extension activated");

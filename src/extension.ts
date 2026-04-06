@@ -59,6 +59,21 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Register "Open MCP Config" command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('lmStudioChat.openMcpConfig', async () => {
+            const fs   = await import('fs');
+            const path = await import('path');
+            const configPath = provider.mcpManager.getConfigFilePath();
+            fs.mkdirSync(path.dirname(configPath), { recursive: true });
+            if (!fs.existsSync(configPath)) {
+                fs.writeFileSync(configPath, '[]', 'utf-8');
+            }
+            const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(configPath));
+            await vscode.window.showTextDocument(doc, { preview: false });
+        })
+    );
+
     console.log('LM Studio Chat extension activated');
 }
 

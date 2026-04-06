@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
-// ── Config types (persisted to globalState) ───────────────────────────────────
+// ── Config types (persisted to mcp.json) ─────────────────────────────────────
 
 export interface McpStdioConfig {
     transport: 'stdio';
@@ -46,48 +48,102 @@ export class McpManager {
     private states: Map<string, McpServerState> = new Map();
     private clients: Map<string, Client> = new Map();
     private statusChangeCallback?: () => void;
+    private configPath: string;
+    private watcher?: vscode.FileSystemWatcher;
+    private reloadDebounce?: ReturnType<typeof setTimeout>;
 
-    constructor(private readonly context: vscode.ExtensionContext) {}
+    constructor(private readonly context: vscode.ExtensionContext) {
+        this.configPath = path.join(context.globalStorageUri.fsPath, 'mcp.json');
+    }
 
     async initialize(): Promise<void> {
-        const configs = this.getServerConfigs();
-        await Promise.allSettled(
-            configs.filter(c => c.enabled).map(c => this.connectServer(c))
-        );
+        // Ensure storage directory exists
+        fs.mkdirSync(path.dirname(this.configPath), { recursive: true });
+
+        // One-time migration from globalState → mcp.json
+        const legacy = this.context.globalState.get<McpServerConfig[]>('mcpServers');
+        if (legacy && legacy.length > 0 && !fs.existsSync(this.configPath)) {
+            this.writeConfigFile(legacy);
+            await this.context.globalState.update('mcpServers', undefined);
+        }
+
+        // Watch mcp.json for external edits
+        const watchDir = vscode.Uri.file(path.dirname(this.configPath));
+        const pattern  = new vscode.RelativePattern(watchDir, 'mcp.json');
+        this.watcher   = vscode.workspace.createFileSystemWatcher(pattern);
+        const scheduleReload = () => {
+            clearTimeout(this.reloadDebounce);
+            this.reloadDebounce = setTimeout(() => this.reloadFromFile(), 400);
+        };
+        this.watcher.onDidChange(scheduleReload);
+        this.watcher.onDidCreate(scheduleReload);
+        this.context.subscriptions.push(this.watcher);
+
+        // Connect enabled servers
+        const configs = this.readConfigFile();
+        await Promise.allSettled(configs.filter(c => c.enabled).map(c => this.connectServer(c)));
     }
 
     dispose(): void {
+        clearTimeout(this.reloadDebounce);
         for (const [, client] of this.clients) {
             client.close().catch(() => {/* best-effort */});
         }
         this.clients.clear();
     }
 
-    // ── Config management ─────────────────────────────────────────────────────
+    // ── Config file I/O ───────────────────────────────────────────────────────
+
+    private readConfigFile(): McpServerConfig[] {
+        try {
+            const raw    = fs.readFileSync(this.configPath, 'utf-8');
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private writeConfigFile(configs: McpServerConfig[]): void {
+        fs.mkdirSync(path.dirname(this.configPath), { recursive: true });
+        fs.writeFileSync(this.configPath, JSON.stringify(configs, null, 2), 'utf-8');
+    }
 
     getServerConfigs(): McpServerConfig[] {
-        return this.context.globalState.get<McpServerConfig[]>('mcpServers', []);
+        return this.readConfigFile();
     }
 
     async saveServerConfigs(newConfigs: McpServerConfig[]): Promise<void> {
-        await this.context.globalState.update('mcpServers', newConfigs);
+        this.writeConfigFile(newConfigs);
+        // Cancel pending watcher-triggered reload; apply immediately instead
+        clearTimeout(this.reloadDebounce);
+        await this.reloadFromFile();
+    }
 
-        const oldNames = new Set(this.states.keys());
-        const newNames = new Set(newConfigs.map(c => c.name));
+    getConfigFilePath(): string {
+        return this.configPath;
+    }
+
+    // ── Reload on file change ─────────────────────────────────────────────────
+
+    private async reloadFromFile(): Promise<void> {
+        const newConfigs = this.readConfigFile();
+        const oldNames   = new Set(this.states.keys());
+        const newNames   = new Set(newConfigs.map(c => c.name));
 
         // Disconnect removed servers
         for (const name of oldNames) {
-            if (!newNames.has(name)) {
-                await this.disconnectServer(name);
-            }
+            if (!newNames.has(name)) { await this.disconnectServer(name); }
         }
 
-        // Connect new servers
+        // Connect newly added enabled servers
         for (const cfg of newConfigs) {
-            if (!oldNames.has(cfg.name) && cfg.enabled) {
+            if (cfg.enabled && !oldNames.has(cfg.name)) {
                 await this.connectServer(cfg);
             }
         }
+
+        this.notifyChange();
     }
 
     // ── Connection ────────────────────────────────────────────────────────────
@@ -101,8 +157,8 @@ export class McpManager {
             if (cfg.config.transport === 'stdio') {
                 transport = new StdioClientTransport({
                     command: cfg.config.command,
-                    args: cfg.config.args ?? [],
-                    env: { ...process.env, ...(cfg.config.env ?? {}) } as Record<string, string>,
+                    args:    cfg.config.args ?? [],
+                    env:     { ...process.env, ...(cfg.config.env ?? {}) } as Record<string, string>,
                 });
             } else {
                 transport = new SSEClientTransport(new URL(cfg.config.url));
@@ -125,8 +181,8 @@ export class McpManager {
             this.states.set(cfg.name, {
                 config: cfg,
                 status: 'connected',
-                tools: toolsResult.tools.map(t => ({
-                    name: t.name,
+                tools:  toolsResult.tools.map(t => ({
+                    name:        t.name,
                     description: t.description,
                     inputSchema: (t.inputSchema ?? {}) as object,
                 })),
@@ -134,10 +190,7 @@ export class McpManager {
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             this.states.set(cfg.name, {
-                config: cfg,
-                status: 'error',
-                errorMessage: message,
-                tools: [],
+                config: cfg, status: 'error', errorMessage: message, tools: [],
             });
         }
 
@@ -174,30 +227,35 @@ export class McpManager {
         const connected = Array.from(this.states.values()).filter(
             s => s.status === 'connected' && s.tools.length > 0
         );
-        if (connected.length === 0) { return ''; }
 
         const lines: string[] = [
             '',
-            'You also have access to MCP (Model Context Protocol) tools from connected servers.',
-            'Call them using:',
+            'MCP (Model Context Protocol) tools are available. Call them using:',
             '<mcp_call server="SERVER_NAME" tool="TOOL_NAME">{"arg1":"value1"}</mcp_call>',
-            '',
-            'Available MCP tools:',
+            'The arguments must be a valid JSON object matching the tool\'s parameters.',
         ];
+
+        if (connected.length === 0) {
+            lines.push('No MCP servers are currently connected — the available tools will be listed here once a server is configured and connected.');
+            return lines.join('\n');
+        }
+
+        lines.push('', 'Available MCP tools:');
 
         for (const s of connected) {
             for (const t of s.tools) {
                 lines.push('');
                 lines.push(`Server: ${s.config.name}  Tool: ${t.name}`);
-                if (t.description) {
-                    lines.push(`  Description: ${t.description}`);
-                }
-                const schema = t.inputSchema as { properties?: Record<string, { description?: string }>; required?: string[] };
+                if (t.description) { lines.push(`  Description: ${t.description}`); }
+                const schema = t.inputSchema as {
+                    properties?: Record<string, { description?: string }>;
+                    required?: string[];
+                };
                 if (schema.properties) {
                     const required = schema.required ?? [];
                     lines.push('  Parameters:');
                     for (const [k, v] of Object.entries(schema.properties)) {
-                        const req = required.includes(k) ? ' (required)' : ' (optional)';
+                        const req  = required.includes(k) ? ' (required)' : ' (optional)';
                         const desc = v.description ? `: ${v.description}` : '';
                         lines.push(`    ${k}${req}${desc}`);
                     }
@@ -215,13 +273,13 @@ export class McpManager {
             throw new Error(`MCP server "${serverName}" is not connected`);
         }
 
-        const result = await client.callTool({ name: toolName, arguments: args as Record<string, unknown> });
+        const result = await client.callTool({
+            name:      toolName,
+            arguments: args as Record<string, unknown>,
+        });
 
         return (result.content as Array<{ type: string; text?: string; [key: string]: unknown }>)
-            .map(block => {
-                if (block.type === 'text') { return block.text ?? ''; }
-                return JSON.stringify(block);
-            })
+            .map(block => block.type === 'text' ? (block.text ?? '') : JSON.stringify(block))
             .join('\n');
     }
 }
