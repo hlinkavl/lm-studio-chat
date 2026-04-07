@@ -473,7 +473,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 ? `\nShell execution is ENABLED. WARNING: run_bash is NOT sandboxed to the workspace — commands can read and write anywhere on the system. You may run commands with:\n<run_bash>\ncommand here\n</run_bash>${isWindows ? '\nIMPORTANT: The shell runs on Windows (cmd.exe). Use Windows commands — e.g. "cmd /c del file.txt" instead of "rm", "cmd /c rmdir /s /q dir" instead of "rm -rf", "cmd /c copy src dest" instead of "cp". Do NOT use Unix/bash commands.' : ''}`
                 : `\nShell execution is DISABLED — do not use <run_bash>, it will be blocked.`;
             if (this.shellEnabled && this.shellPermissions.trim()) {
-                shellNote += '\n\nIMPORTANT: Before running ANY shell command, you MUST read and strictly follow the shell permissions below. These constraints OVERRIDE any previous instructions about running commands freely — even if the system prompt says you may run anything.\n'
+                shellNote += '\n\nThe user has defined additional shell permissions below. You MUST read and follow every constraint listed here before running any shell command. These are non-negotiable — treat them as the highest-priority rules for run_bash.\n'
                     + '── Shell Permissions (HARD CONSTRAINTS — never violate) ──────\n'
                     + this.shellPermissions.trim().split('\n').map(l => `  ${l}`).join('\n')
                     + '\n──────────────────────────────────────────────────────────────';
@@ -549,12 +549,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private async _processToolCallsInner(response: string): Promise<void> {
         if (!this.webviewView) { return; }
 
-        // Quick pre-check before running the regex
-        const hasToolTag = response.includes('<write_file') || response.includes('<run_bash>') ||
-                           response.includes('<read_file') || response.includes('<patch_file') ||
-                           response.includes('<list_dir')  || response.includes('<search_files') ||
-                           response.includes('<delete_file') || response.includes('<create_dir') ||
-                           response.includes('<rename_file') || response.includes('<mcp_call');
+        // Quick pre-check before running the regex.
+        // For tags that require a closing element, require BOTH opening and closing to be present —
+        // this prevents false positives when the model merely *mentions* a tag name in text.
+        const hasToolTag =
+            (response.includes('<write_file')   && response.includes('</write_file>'))   ||
+            (response.includes('<run_bash>')     && response.includes('</run_bash>'))     ||
+            (response.includes('<patch_file')    && response.includes('</patch_file>'))   ||
+            (response.includes('<mcp_call')      && response.includes('</mcp_call>'))     ||
+            response.includes('<read_file')   || response.includes('<list_dir')   ||
+            response.includes('<search_files') || response.includes('<delete_file') ||
+            response.includes('<create_dir')  || response.includes('<rename_file');
 
         // Detect native model tool-call formats (wrong format — model ignoring instructions)
         const hasNativeFormat = response.includes('<tool_call') || response.includes('[TOOL_CALLS]') ||

@@ -24455,7 +24455,7 @@ command here
 </run_bash>${isWindows ? '\nIMPORTANT: The shell runs on Windows (cmd.exe). Use Windows commands \u2014 e.g. "cmd /c del file.txt" instead of "rm", "cmd /c rmdir /s /q dir" instead of "rm -rf", "cmd /c copy src dest" instead of "cp". Do NOT use Unix/bash commands.' : ""}` : `
 Shell execution is DISABLED \u2014 do not use <run_bash>, it will be blocked.`;
       if (this.shellEnabled && this.shellPermissions.trim()) {
-        shellNote += "\n\nIMPORTANT: Before running ANY shell command, you MUST read and strictly follow the shell permissions below. These constraints OVERRIDE any previous instructions about running commands freely \u2014 even if the system prompt says you may run anything.\n\u2500\u2500 Shell Permissions (HARD CONSTRAINTS \u2014 never violate) \u2500\u2500\u2500\u2500\u2500\u2500\n" + this.shellPermissions.trim().split("\n").map((l) => `  ${l}`).join("\n") + "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500";
+        shellNote += "\n\nThe user has defined additional shell permissions below. You MUST read and follow every constraint listed here before running any shell command. These are non-negotiable \u2014 treat them as the highest-priority rules for run_bash.\n\u2500\u2500 Shell Permissions (HARD CONSTRAINTS \u2014 never violate) \u2500\u2500\u2500\u2500\u2500\u2500\n" + this.shellPermissions.trim().split("\n").map((l) => `  ${l}`).join("\n") + "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500";
       }
       prompt += `
 
@@ -24530,7 +24530,7 @@ IMPORTANT: Every path shown in the tree above exists. NEVER say a file or direct
     if (!this.webviewView) {
       return;
     }
-    const hasToolTag = response.includes("<write_file") || response.includes("<run_bash>") || response.includes("<read_file") || response.includes("<patch_file") || response.includes("<list_dir") || response.includes("<search_files") || response.includes("<delete_file") || response.includes("<create_dir") || response.includes("<rename_file") || response.includes("<mcp_call");
+    const hasToolTag = response.includes("<write_file") && response.includes("</write_file>") || response.includes("<run_bash>") && response.includes("</run_bash>") || response.includes("<patch_file") && response.includes("</patch_file>") || response.includes("<mcp_call") && response.includes("</mcp_call>") || response.includes("<read_file") || response.includes("<list_dir") || response.includes("<search_files") || response.includes("<delete_file") || response.includes("<create_dir") || response.includes("<rename_file");
     const hasNativeFormat = response.includes("<tool_call") || response.includes("[TOOL_CALLS]") || response.includes("<|tool_call|>") || response.includes('"function_call"');
     if (!hasToolTag && !hasNativeFormat) {
       return;
