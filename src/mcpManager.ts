@@ -256,7 +256,10 @@ export class McpManager {
 
     // ── Tool access ───────────────────────────────────────────────────────────
 
-    getToolsSystemPromptBlock(instructions?: Record<string, string>): string {
+    getToolsSystemPromptBlock(
+        instructions?: Record<string, string>,
+        permissions?: Record<string, string>
+    ): string {
         const connected = Array.from(this.states.values()).filter(
             s => s.status === 'connected' && s.tools.length > 0
         );
@@ -276,14 +279,35 @@ export class McpManager {
             return lines.join('\n');
         }
 
-        lines.push('', 'Available MCP tools:');
+        lines.push(
+            '',
+            'Each server below may have custom context and hard permission constraints.',
+            'You MUST read both sections for every server before calling any of its tools.',
+            '',
+            'Available MCP tools:'
+        );
 
         for (const s of connected) {
             lines.push('', `Server: ${s.config.name}`);
+
             const serverInstructions = instructions?.[s.config.name]?.trim();
             if (serverInstructions) {
-                lines.push(`  Instructions: ${serverInstructions}`);
+                lines.push(
+                    '  ── Context (read before using this server) ──────────────',
+                    ...serverInstructions.split('\n').map(l => `  ${l}`),
+                    '  ─────────────────────────────────────────────────────────'
+                );
             }
+
+            const serverPermissions = permissions?.[s.config.name]?.trim();
+            if (serverPermissions) {
+                lines.push(
+                    '  ── Permissions (HARD CONSTRAINTS — never violate) ────────',
+                    ...serverPermissions.split('\n').map(l => `  ${l}`),
+                    '  ─────────────────────────────────────────────────────────'
+                );
+            }
+
             for (const t of s.tools) {
                 lines.push('');
                 lines.push(`  Tool: ${t.name}`);

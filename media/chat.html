@@ -517,12 +517,13 @@
         }
         .mcp-btn-add:hover { background: rgba(78,201,176,0.2); }
 
-        /* ── Per-server instructions ── */
+        /* ── Per-server instructions & permissions ── */
         .mcp-instr-wrap { margin-top: 6px; }
         .mcp-instr-label {
             font-size: 9px; color: #8a8a8a; text-transform: uppercase;
             letter-spacing: 0.05em; margin-bottom: 3px;
         }
+        .mcp-instr-label.perms { color: #c8a84b; }
         .mcp-instr-area {
             width: 100%; box-sizing: border-box;
             background: #1a1a1a; border: 1px solid var(--border); border-radius: 3px;
@@ -532,6 +533,7 @@
         }
         .mcp-instr-area::placeholder { color: var(--subtle); }
         .mcp-instr-area:focus { border-color: rgba(181,206,168,0.4); }
+        .mcp-instr-area.perms:focus { border-color: rgba(200,168,75,0.5); }
     </style>
 </head>
 <body>
@@ -720,7 +722,9 @@
     const mcpEditConfigBtn = document.getElementById('mcpEditConfigBtn');
     let mcpConfigs        = [];
     let mcpInstructions   = {};
+    let mcpPermissions    = {};
     let mcpSaveTimer      = null;
+    let mcpPermSaveTimer  = null;
     let isStreaming       = false;
     let currentBodyEl     = null;
     let currentRawText    = '';
@@ -1196,6 +1200,13 @@
         }, 400);
     }
 
+    function scheduleSaveMcpPermissions() {
+        clearTimeout(mcpPermSaveTimer);
+        mcpPermSaveTimer = setTimeout(() => {
+            vscode.postMessage({ type: 'saveMcpPermissions', permissions: mcpPermissions });
+        }, 400);
+    }
+
     function renderMcpServers(servers) {
         mcpServerList.innerHTML = '';
         if (!servers || servers.length === 0) {
@@ -1256,11 +1267,11 @@
 
             const instrLabel = document.createElement('div');
             instrLabel.className = 'mcp-instr-label';
-            instrLabel.textContent = 'AI instructions';
+            instrLabel.textContent = 'Context';
 
             const instrArea = document.createElement('textarea');
             instrArea.className = 'mcp-instr-area';
-            instrArea.placeholder = 'Custom context for the AI — e.g. "PostgreSQL database on localhost, schema: public. Always list tables before querying."';
+            instrArea.placeholder = 'Describe what this server connects to — e.g. "PostgreSQL database on localhost, schema: public. Always list tables before querying."';
             instrArea.value = mcpInstructions[s.name] || '';
             instrArea.spellcheck = false;
             instrArea.addEventListener('input', () => {
@@ -1271,6 +1282,28 @@
             instrWrap.appendChild(instrLabel);
             instrWrap.appendChild(instrArea);
             row.appendChild(instrWrap);
+
+            // Per-server permissions (hard constraints)
+            const permsWrap = document.createElement('div');
+            permsWrap.className = 'mcp-instr-wrap';
+
+            const permsLabel = document.createElement('div');
+            permsLabel.className = 'mcp-instr-label perms';
+            permsLabel.textContent = 'Permissions';
+
+            const permsArea = document.createElement('textarea');
+            permsArea.className = 'mcp-instr-area perms';
+            permsArea.placeholder = 'Hard constraints for the AI — e.g. "Only run SELECT queries. Never INSERT, UPDATE, DELETE, DROP, or ALTER."';
+            permsArea.value = mcpPermissions[s.name] || '';
+            permsArea.spellcheck = false;
+            permsArea.addEventListener('input', () => {
+                mcpPermissions[s.name] = permsArea.value;
+                scheduleSaveMcpPermissions();
+            });
+
+            permsWrap.appendChild(permsLabel);
+            permsWrap.appendChild(permsArea);
+            row.appendChild(permsWrap);
 
             mcpServerList.appendChild(row);
         }
@@ -1456,6 +1489,7 @@
             case 'mcpStatus': {
                 mcpConfigs = msg.configs || [];
                 mcpInstructions = msg.instructions || {};
+                mcpPermissions  = msg.permissions  || {};
                 renderMcpServers(msg.servers || []);
                 const connectedCount = (msg.servers || []).filter(s => s.status === 'connected').length;
                 if (connectedCount > 0) {

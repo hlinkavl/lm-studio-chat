@@ -23931,7 +23931,7 @@ var McpManager = class {
     this.statusChangeCallback?.();
   }
   // ── Tool access ───────────────────────────────────────────────────────────
-  getToolsSystemPromptBlock(instructions) {
+  getToolsSystemPromptBlock(instructions, permissions) {
     const connected = Array.from(this.states.values()).filter(
       (s) => s.status === "connected" && s.tools.length > 0
     );
@@ -23948,12 +23948,30 @@ var McpManager = class {
       lines.push("No MCP servers are currently connected \u2014 the available tools will be listed here once a server is configured and connected.");
       return lines.join("\n");
     }
-    lines.push("", "Available MCP tools:");
+    lines.push(
+      "",
+      "Each server below may have custom context and hard permission constraints.",
+      "You MUST read both sections for every server before calling any of its tools.",
+      "",
+      "Available MCP tools:"
+    );
     for (const s of connected) {
       lines.push("", `Server: ${s.config.name}`);
       const serverInstructions = instructions?.[s.config.name]?.trim();
       if (serverInstructions) {
-        lines.push(`  Instructions: ${serverInstructions}`);
+        lines.push(
+          "  \u2500\u2500 Context (read before using this server) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+          ...serverInstructions.split("\n").map((l) => `  ${l}`),
+          "  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        );
+      }
+      const serverPermissions = permissions?.[s.config.name]?.trim();
+      if (serverPermissions) {
+        lines.push(
+          "  \u2500\u2500 Permissions (HARD CONSTRAINTS \u2014 never violate) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+          ...serverPermissions.split("\n").map((l) => `  ${l}`),
+          "  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        );
       }
       for (const t of s.tools) {
         lines.push("");
@@ -23997,6 +24015,7 @@ var ChatViewProvider = class {
     this.conversationHistory = [];
     this.pendingTools = /* @__PURE__ */ new Map();
     this.mcpInstructions = {};
+    this.mcpPermissions = {};
     this.toolIterations = 0;
     this.isProcessingTools = false;
     this.currentModel = "";
@@ -24012,6 +24031,7 @@ var ChatViewProvider = class {
     this.permissionMode = context.globalState.get("permissionMode", "ask");
     this.shellEnabled = context.globalState.get("shellEnabled", false);
     this.mcpInstructions = context.globalState.get("mcpInstructions", {});
+    this.mcpPermissions = context.globalState.get("mcpPermissions", {});
     const savedHistory = context.globalState.get("chatHistory", []);
     this.conversationHistory = savedHistory;
   }
@@ -24069,6 +24089,10 @@ var ChatViewProvider = class {
         case "saveMcpInstructions":
           this.mcpInstructions = message.instructions ?? {};
           await this.context.globalState.update("mcpInstructions", this.mcpInstructions);
+          break;
+        case "saveMcpPermissions":
+          this.mcpPermissions = message.permissions ?? {};
+          await this.context.globalState.update("mcpPermissions", this.mcpPermissions);
           break;
         case "openMcpConfig": {
           const configPath = this.mcpManager.getConfigFilePath();
@@ -24278,7 +24302,8 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
       type: "mcpStatus",
       servers,
       configs: this.mcpManager.getServerConfigs(),
-      instructions: this.mcpInstructions
+      instructions: this.mcpInstructions,
+      permissions: this.mcpPermissions
     });
   }
   resetConversation() {
@@ -24373,7 +24398,7 @@ ${tree}
 
 IMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist \u2014 use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.${shellNote}`;
     }
-    prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions);
+    prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
     return prompt;
   }
   // ── User message handler ─────────────────────────────────────────────────
