@@ -24397,14 +24397,14 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     const pad = (n) => String(n).padStart(2, "0");
     const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     const filename = `chat-${timestamp}.md`;
-    const exportDir = path4.join(wsFolder.uri.fsPath, ".lm-studio-chat");
+    const exportDir = path4.join(wsFolder.uri.fsPath, "lm-chat-history");
     fs3.mkdirSync(exportDir, { recursive: true });
     const filePath = path4.join(exportDir, filename);
     const content = this.formatConversation();
     fs3.writeFileSync(filePath, content, "utf-8");
     const doc = await vscode4.workspace.openTextDocument(vscode4.Uri.file(filePath));
     await vscode4.window.showTextDocument(doc, { preview: true });
-    vscode4.window.showInformationMessage(`Conversation saved to .lm-studio-chat/${filename}`);
+    vscode4.window.showInformationMessage(`Conversation saved to lm-chat-history/${filename}`);
   }
   formatConversation() {
     const lines = [];
@@ -24533,6 +24533,21 @@ File tree (use these exact paths in tool calls):
 ${tree}
 
 IMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist \u2014 use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.`;
+      const historyDir = path4.join(wsPath, "lm-chat-history");
+      if (fs3.existsSync(historyDir)) {
+        try {
+          const historyFiles = fs3.readdirSync(historyDir).filter((f) => f.endsWith(".md") || f.endsWith(".txt")).sort().reverse();
+          if (historyFiles.length > 0) {
+            const fileList = historyFiles.slice(0, 10).map((f) => `  lm-chat-history/${f}`).join("\n");
+            prompt += `
+
+Past conversation exports (newest first):
+${fileList}
+Use <read_file path="lm-chat-history/FILENAME"/> to recall context from previous conversations. Do this automatically without asking when it seems useful.`;
+          }
+        } catch {
+        }
+      }
     }
     prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
     return prompt;

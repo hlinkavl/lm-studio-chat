@@ -417,7 +417,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
         const filename = `chat-${timestamp}.md`;
 
-        const exportDir = path.join(wsFolder.uri.fsPath, '.lm-studio-chat');
+        const exportDir = path.join(wsFolder.uri.fsPath, 'lm-chat-history');
         fs.mkdirSync(exportDir, { recursive: true });
 
         const filePath = path.join(exportDir, filename);
@@ -426,7 +426,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
         await vscode.window.showTextDocument(doc, { preview: true });
-        vscode.window.showInformationMessage(`Conversation saved to .lm-studio-chat/${filename}`);
+        vscode.window.showInformationMessage(`Conversation saved to lm-chat-history/${filename}`);
     }
 
     private formatConversation(): string {
@@ -568,6 +568,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
             // Workspace context (file tree) follows shell settings
             prompt += `\n\nCurrent workspace: ${wsPath}\n\nFile tree (use these exact paths in tool calls):\n${tree}\n\nIMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist — use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.`;
+
+            // Chat history folder hint — list actual files so the model can read them directly
+            const historyDir = path.join(wsPath, 'lm-chat-history');
+            if (fs.existsSync(historyDir)) {
+                try {
+                    const historyFiles = fs.readdirSync(historyDir)
+                        .filter(f => f.endsWith('.md') || f.endsWith('.txt'))
+                        .sort()
+                        .reverse(); // newest first
+                    if (historyFiles.length > 0) {
+                        const fileList = historyFiles.slice(0, 10).map(f => `  lm-chat-history/${f}`).join('\n');
+                        prompt += `\n\nPast conversation exports (newest first):\n${fileList}\nUse <read_file path="lm-chat-history/FILENAME"/> to recall context from previous conversations. Do this automatically without asking when it seems useful.`;
+                    }
+                } catch { /* ignore read errors */ }
+            }
         }
         prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
         return prompt;
