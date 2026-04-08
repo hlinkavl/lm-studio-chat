@@ -24656,7 +24656,7 @@ ${content}
 \`\`\``
           });
           this.saveHistory();
-          this.webviewView.webview.postMessage({ type: "toolRead", path: tool.path });
+          this.webviewView.webview.postMessage({ type: "toolRead", path: tool.path, content });
           didRead = true;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -24684,7 +24684,7 @@ Error: ${msg}`
 ${listing}`
           });
           this.saveHistory();
-          this.webviewView.webview.postMessage({ type: "toolListDir", path: tool.path });
+          this.webviewView.webview.postMessage({ type: "toolListDir", path: tool.path, content: listing });
           didRead = true;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);

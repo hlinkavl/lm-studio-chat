@@ -474,6 +474,33 @@
         .mcp-call-output.visible { display: block; }
         .mcp-call-output.err { color: var(--error); }
 
+        /* ── Read/list tool cards ── */
+        .read-card {
+            margin: 8px 0 4px; border: 1px solid rgba(156,220,254,0.3);
+            border-radius: 4px; overflow: hidden;
+        }
+        .read-card.err { border-color: rgba(244,135,113,0.3); }
+        .read-card-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; background: var(--surface); cursor: pointer;
+        }
+        .read-card-icon { color: var(--ai); font-size: 12px; flex-shrink: 0; }
+        .read-card.err .read-card-icon { color: var(--error); }
+        .read-card-label {
+            flex: 1; font-size: 11px; color: var(--ai);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .read-card.err .read-card-label { color: var(--error); }
+        .read-card-status { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+        .read-card-output {
+            background: #1a1a1a; padding: 8px 10px; font-size: 11px;
+            font-family: var(--font); color: var(--fg); max-height: 180px;
+            overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+            line-height: 1.5; border-top: 1px solid var(--border);
+            display: none;
+        }
+        .read-card-output.visible { display: block; }
+
         /* ── MCP button ── */
         .btn-mcp { color: #b5cea8; border-color: rgba(181,206,168,0.35); }
         .btn-mcp:hover { color: #c8dfc0; border-color: rgba(181,206,168,0.55); background: rgba(181,206,168,0.06); }
@@ -1653,28 +1680,78 @@
             }
 
             case 'toolRead': {
-                const el = document.createElement('div');
-                el.className = 'sys-msg';
-                if (msg.error) {
-                    el.style.color = 'var(--error)';
-                    el.textContent = `read failed: ${msg.path} — ${msg.error}`;
-                } else {
-                    el.textContent = `read ${msg.path}`;
-                }
-                messagesEl.appendChild(el); scrollBottom();
+                hideWelcome();
+                const card = document.createElement('div');
+                card.className = 'read-card' + (msg.error ? ' err' : '');
+
+                const header = document.createElement('div');
+                header.className = 'read-card-header';
+
+                const icon = document.createElement('span');
+                icon.className = 'read-card-icon';
+                icon.textContent = msg.error ? '✗' : '📄';
+
+                const label = document.createElement('span');
+                label.className = 'read-card-label';
+                label.textContent = msg.error ? `read failed: ${msg.path}` : `read ${msg.path}`;
+                label.title = msg.path;
+
+                const status = document.createElement('span');
+                status.className = 'read-card-status';
+                status.textContent = msg.error ? 'error' : 'done';
+
+                header.appendChild(icon);
+                header.appendChild(label);
+                header.appendChild(status);
+                card.appendChild(header);
+
+                const output = document.createElement('div');
+                output.className = 'read-card-output';
+                output.textContent = msg.error || msg.content || '';
+                card.appendChild(output);
+
+                header.addEventListener('click', () => output.classList.toggle('visible'));
+
+                messagesEl.appendChild(card);
+                scrollBottom();
                 break;
             }
 
             case 'toolListDir': {
-                const el = document.createElement('div');
-                el.className = 'sys-msg';
-                if (msg.error) {
-                    el.style.color = 'var(--error)';
-                    el.textContent = `list_dir failed: ${msg.path} — ${msg.error}`;
-                } else {
-                    el.textContent = `ls ${msg.path}`;
-                }
-                messagesEl.appendChild(el); scrollBottom();
+                hideWelcome();
+                const card = document.createElement('div');
+                card.className = 'read-card' + (msg.error ? ' err' : '');
+
+                const header = document.createElement('div');
+                header.className = 'read-card-header';
+
+                const icon = document.createElement('span');
+                icon.className = 'read-card-icon';
+                icon.textContent = msg.error ? '✗' : '📁';
+
+                const label = document.createElement('span');
+                label.className = 'read-card-label';
+                label.textContent = msg.error ? `list_dir failed: ${msg.path}` : `ls ${msg.path}`;
+                label.title = msg.path;
+
+                const status = document.createElement('span');
+                status.className = 'read-card-status';
+                status.textContent = msg.error ? 'error' : 'done';
+
+                header.appendChild(icon);
+                header.appendChild(label);
+                header.appendChild(status);
+                card.appendChild(header);
+
+                const output = document.createElement('div');
+                output.className = 'read-card-output';
+                output.textContent = msg.error || msg.content || '';
+                card.appendChild(output);
+
+                header.addEventListener('click', () => output.classList.toggle('visible'));
+
+                messagesEl.appendChild(card);
+                scrollBottom();
                 break;
             }
 

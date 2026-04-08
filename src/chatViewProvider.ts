@@ -717,7 +717,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         content: `[Tool result: read_file "${tool.path}"]\n\`\`\`\n${content}\n\`\`\``,
                     });
                     this.saveHistory();
-                    this.webviewView.webview.postMessage({ type: 'toolRead', path: tool.path });
+                    this.webviewView.webview.postMessage({ type: 'toolRead', path: tool.path, content });
                     didRead = true;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
@@ -743,7 +743,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         content: `[Tool result: list_dir "${tool.path}"]\n${listing}`,
                     });
                     this.saveHistory();
-                    this.webviewView.webview.postMessage({ type: 'toolListDir', path: tool.path });
+                    this.webviewView.webview.postMessage({ type: 'toolListDir', path: tool.path, content: listing });
                     didRead = true;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
