@@ -401,11 +401,11 @@
         .sysprompt-wrap textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
         .sysprompt-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 6px 10px; font-size: 11px; color: var(--muted);
+            padding: 8px 10px; font-size: 11px; color: var(--fg);
             flex-shrink: 0;
         }
         .sysprompt-save {
-            font-family: var(--font); font-size: 10px;
+            font-family: var(--font); font-size: 11px;
             background: rgba(78,201,176,0.1); border: 1px solid rgba(78,201,176,0.4);
             color: var(--prompt); border-radius: 2px; padding: 2px 10px; cursor: pointer;
         }
@@ -504,7 +504,7 @@
 
         .mcp-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 6px 10px; font-size: 10px; color: var(--muted);
+            padding: 8px 10px; font-size: 11px; color: var(--fg);
             flex-shrink: 0; border-bottom: 1px solid var(--border);
         }
         .mcp-header-title { color: var(--fg); font-size: 11px; }
@@ -526,13 +526,13 @@
         .mcp-dot.error      { background: var(--error); }
         .mcp-server-info { flex: 1; min-width: 0; }
         .mcp-server-name { font-size: 12px; color: var(--fg); }
-        .mcp-server-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
-        .mcp-server-tools { font-size: 10px; color: var(--prompt); margin-top: 2px; }
-        .mcp-server-error { font-size: 10px; color: var(--error); margin-top: 2px; word-break: break-all; }
+        .mcp-server-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+        .mcp-server-tools { font-size: 11px; color: var(--prompt); margin-top: 2px; }
+        .mcp-server-error { font-size: 11px; color: var(--error); margin-top: 2px; word-break: break-all; }
         .mcp-add-section { padding: 10px 0; }
-        .mcp-add-title { font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+        .mcp-add-title { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
         .mcp-btn-add {
-            font-family: var(--font); font-size: 10px;
+            font-family: var(--font); font-size: 11px;
             background: rgba(78,201,176,0.1); border: 1px solid rgba(78,201,176,0.4);
             color: var(--prompt); border-radius: 2px; padding: 3px 12px; cursor: pointer;
         }
@@ -558,7 +558,7 @@
         .shell-toggle-row { display: flex; align-items: center; gap: 10px; padding: 4px 0 14px; }
         .shell-toggle-label { font-size: 11px; color: var(--fg); }
         .btn-shell-toggle {
-            font-family: var(--font); font-size: 10px; padding: 2px 10px;
+            font-family: var(--font); font-size: 11px; padding: 2px 10px;
             border-radius: 2px; cursor: pointer; border: 1px solid var(--border);
             background: transparent; color: var(--muted); transition: all 0.15s;
         }
@@ -570,7 +570,7 @@
         /* ── Per-server instructions & permissions ── */
         .mcp-instr-wrap { margin-top: 12px; }
         .mcp-instr-label {
-            font-size: 9px; color: #8a8a8a; text-transform: uppercase;
+            font-size: 10px; color: var(--muted); text-transform: uppercase;
             letter-spacing: 0.05em; margin-bottom: 4px;
         }
         .mcp-instr-label.perms { color: #c8a84b; }
@@ -666,7 +666,7 @@
         <div class="sysprompt-header">
             <div>
                 <div>system prompt — sent at the start of every conversation</div>
-                <div style="font-size:10px;color:var(--muted);margin-top:2px">workspace tree + connected MCP tools are appended automatically — everything above is yours to edit</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">workspace tree + connected MCP tools are appended automatically — everything above is yours to edit</div>
             </div>
             <div style="display:flex;gap:6px;align-items:center">
                 <button class="sysprompt-save" id="sysPromptSave">save &amp; close</button>
@@ -687,10 +687,10 @@
             <div class="mcp-add-section">
                 <div class="mcp-add-title">configure servers by editing the config file</div>
                 <button class="mcp-btn-add" id="mcpEditConfigBtn">open mcp.json</button>
-                <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6">
+                <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">
                     Same format as VS Code / Claude Code:
                 </div>
-                <pre style="font-size:10px;background:#1a1a1a;border:1px solid var(--border);border-radius:3px;padding:7px 10px;margin-top:5px;overflow-x:auto;line-height:1.55;color:var(--fg)">{
+                <pre style="font-size:11px;background:#1a1a1a;border:1px solid var(--border);border-radius:3px;padding:7px 10px;margin-top:5px;overflow-x:auto;line-height:1.55;color:var(--fg)">{
   "mcpServers": {
     "my-server": {
       "command": "npx",
@@ -698,8 +698,8 @@
     }
   }
 }</pre>
-                <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.6">
-                    For SSE: use <code style="font-size:10px;background:#2d2d2d;padding:1px 3px;border-radius:2px">"url": "http://..."</code> instead of command/args. Save the file — changes apply automatically.
+                <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+                    For SSE: use <code style="font-size:11px;background:#2d2d2d;padding:1px 3px;border-radius:2px">"url": "http://..."</code> instead of command/args. Save the file — changes apply automatically.
                 </div>
             </div>
         </div>
@@ -715,14 +715,14 @@
             <div class="shell-toggle-row">
                 <span class="shell-toggle-label">Shell execution</span>
                 <button class="btn-shell-toggle" id="shellToggleBtn">OFF</button>
-                <span style="font-size:10px;color:var(--muted)">— commands are NOT sandboxed to the workspace</span>
+                <span style="font-size:11px;color:var(--muted)">— commands are NOT sandboxed to the workspace</span>
             </div>
             <div class="mcp-instr-wrap">
                 <div class="mcp-instr-label perms">Permissions</div>
                 <textarea class="mcp-instr-area perms" id="shellPermsArea" spellcheck="false"
                     placeholder="Hard constraints — e.g. &quot;Never run rm -rf. Never modify files outside src/. No curl to external URLs.&quot;"></textarea>
             </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.6">
+            <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6">
                 Permissions are injected as hard constraints in the system prompt every turn. Shell is NOT sandboxed — commands can access the entire system.
             </div>
         </div>
