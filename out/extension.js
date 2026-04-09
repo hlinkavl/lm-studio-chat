@@ -24613,7 +24613,7 @@ You can read any of the files listed above using read_file with the exact path s
     if (!this.webviewView) {
       return;
     }
-    const stripped = response.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]+`/g, "");
+    const stripped = response.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]+`/g, "").replace(/<\|?tool_call\|?[^>]*>([\s\S]*?)<\|?\/?tool_call\|?>/g, "$1");
     const hasToolTag = stripped.includes("<write_file") && stripped.includes("</write_file>") || stripped.includes("<run_bash>") && stripped.includes("</run_bash>") || stripped.includes("<patch_file") && stripped.includes("</patch_file>") || stripped.includes("<mcp_call") && stripped.includes("</mcp_call>") || stripped.includes("<read_file") || stripped.includes("<list_dir") || stripped.includes("<search_files") || stripped.includes("<delete_file") || stripped.includes("<create_dir") || stripped.includes("<rename_file");
     const hasNativeFormat = stripped.includes("<tool_call") || stripped.includes("[TOOL_CALLS]") || stripped.includes("<|tool_call|>") || stripped.includes('"function_call"');
     if (!hasToolTag && !hasNativeFormat) {
@@ -24732,6 +24732,7 @@ Success: file written.`
               autoApplied: true,
               success: true
             });
+            didRead = true;
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             this.conversationHistory.push({
@@ -24792,6 +24793,7 @@ Success: patch applied.`
               autoApplied: true,
               success: true
             });
+            didRead = true;
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             this.conversationHistory.push({
@@ -24833,7 +24835,12 @@ Error: ${msg}`
 ${result}`
           });
           this.saveHistory();
-          this.webviewView.webview.postMessage({ type: "toolRead", path: `search: ${tool.query}` });
+          this.webviewView.webview.postMessage({
+            type: "toolSearch",
+            query: tool.query,
+            glob: tool.glob,
+            content: result
+          });
           didRead = true;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -24843,6 +24850,12 @@ ${result}`
 Error: ${msg}`
           });
           this.saveHistory();
+          this.webviewView.webview.postMessage({
+            type: "toolSearch",
+            query: tool.query,
+            glob: tool.glob,
+            error: msg
+          });
           didRead = true;
         }
         continue;
@@ -24860,7 +24873,8 @@ Success: file deleted.`
             this.webviewView.webview.postMessage({
               type: "toolPendingBash",
               id,
-              command: `delete: ${tool.path}`,
+              command: `delete ${tool.path}`,
+              toolOp: "delete",
               autoApplied: true,
               success: true,
               output: "File deleted."
@@ -24877,7 +24891,8 @@ Error: ${msg}`
             this.webviewView.webview.postMessage({
               type: "toolPendingBash",
               id,
-              command: `delete: ${tool.path}`,
+              command: `delete ${tool.path}`,
+              toolOp: "delete",
               autoApplied: true,
               success: false,
               output: msg
@@ -24889,7 +24904,8 @@ Error: ${msg}`
           this.webviewView.webview.postMessage({
             type: "toolPendingBash",
             id,
-            command: `delete: ${tool.path}`
+            command: `delete ${tool.path}`,
+            toolOp: "delete"
           });
         }
         continue;
@@ -24907,7 +24923,8 @@ Success: directory created.`
             this.webviewView.webview.postMessage({
               type: "toolPendingBash",
               id,
-              command: `mkdir: ${tool.path}`,
+              command: `mkdir ${tool.path}`,
+              toolOp: "mkdir",
               autoApplied: true,
               success: true,
               output: "Directory created."
@@ -24924,7 +24941,8 @@ Error: ${msg}`
             this.webviewView.webview.postMessage({
               type: "toolPendingBash",
               id,
-              command: `mkdir: ${tool.path}`,
+              command: `mkdir ${tool.path}`,
+              toolOp: "mkdir",
               autoApplied: true,
               success: false,
               output: msg
@@ -24936,7 +24954,8 @@ Error: ${msg}`
           this.webviewView.webview.postMessage({
             type: "toolPendingBash",
             id,
-            command: `mkdir: ${tool.path}`
+            command: `mkdir ${tool.path}`,
+            toolOp: "mkdir"
           });
         }
         continue;
@@ -24954,7 +24973,8 @@ Success: file renamed.`
             this.webviewView.webview.postMessage({
               type: "toolPendingBash",
               id,
-              command: `rename: ${tool.from} \u2192 ${tool.to}`,
+              command: `rename ${tool.from} \u2192 ${tool.to}`,
+              toolOp: "rename",
               autoApplied: true,
               success: true,
               output: "File renamed."
@@ -24971,7 +24991,8 @@ Error: ${msg}`
             this.webviewView.webview.postMessage({
               type: "toolPendingBash",
               id,
-              command: `rename: ${tool.from} \u2192 ${tool.to}`,
+              command: `rename ${tool.from} \u2192 ${tool.to}`,
+              toolOp: "rename",
               autoApplied: true,
               success: false,
               output: msg
@@ -24983,7 +25004,8 @@ Error: ${msg}`
           this.webviewView.webview.postMessage({
             type: "toolPendingBash",
             id,
-            command: `rename: ${tool.from} \u2192 ${tool.to}`
+            command: `rename ${tool.from} \u2192 ${tool.to}`,
+            toolOp: "rename"
           });
         }
         continue;
@@ -25287,7 +25309,7 @@ function parseToolCalls(text) {
   return results.sort((a, b) => a.pos - b.pos);
 }
 function stripToolTagsForExport(text) {
-  return text.replace(/<write_file\b[^>]*>[\s\S]*?<\/write_file>/g, "").replace(/<patch_file\b[^>]*>[\s\S]*?<\/patch_file>/g, "").replace(/<run_bash\b[^>]*>[\s\S]*?<\/run_bash>/g, "").replace(/<read_file\b[^>]*(?:\/>|>\s*<\/read_file>)/g, "").replace(/<list_dir\b[^>]*(?:\/>|>\s*<\/list_dir>)/g, "").replace(/<search_files\b[^>]*(?:\/>|>\s*<\/search_files>)/g, "").replace(/<delete_file\b[^>]*(?:\/>|>\s*<\/delete_file>)/g, "").replace(/<create_dir\b[^>]*(?:\/>|>\s*<\/create_dir>)/g, "").replace(/<rename_file\b[^>]*(?:\/>|>\s*<\/rename_file>)/g, "").replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, "").replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  return text.replace(/<write_file\b[^>]*>[\s\S]*?<\/write_file>/g, "").replace(/<patch_file\b[^>]*>[\s\S]*?<\/patch_file>/g, "").replace(/<run_bash\b[^>]*>[\s\S]*?<\/run_bash>/g, "").replace(/<read_file\b[^>]*(?:\/>|>\s*<\/read_file>)/g, "").replace(/<list_dir\b[^>]*(?:\/>|>\s*<\/list_dir>)/g, "").replace(/<search_files\b[^>]*(?:\/>|>\s*<\/search_files>)/g, "").replace(/<delete_file\b[^>]*(?:\/>|>\s*<\/delete_file>)/g, "").replace(/<create_dir\b[^>]*(?:\/>|>\s*<\/create_dir>)/g, "").replace(/<rename_file\b[^>]*(?:\/>|>\s*<\/rename_file>)/g, "").replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, "").replace(/<\|?tool_call\|?[^>]*>[\s\S]*?<\|?\/?tool_call\|?>/g, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 function diffSearchReplace(search, replace) {
   const dels = search.split("\n").map((t) => ({ type: "del", text: t }));

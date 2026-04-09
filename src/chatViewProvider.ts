@@ -656,9 +656,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         // Strip markdown code blocks (fenced and inline) before checking for tool tags.
         // This prevents the parser from acting on tag examples the model quotes in its
         // explanatory text (e.g. when asked to list the rules it follows).
+        // Also unwrap native <tool_call> wrappers that local models sometimes produce
+        // around our XML tags (e.g. <tool_call><read_file path="..."/></tool_call>).
         const stripped = response
             .replace(/```[\s\S]*?```/g, '')   // fenced code blocks
-            .replace(/`[^`\n]+`/g, '');       // inline code spans
+            .replace(/`[^`\n]+`/g, '')        // inline code spans
+            .replace(/<\|?tool_call\|?[^>]*>([\s\S]*?)<\|?\/?tool_call\|?>/g, '$1');  // unwrap tool_call wrappers
 
         // Quick pre-check before running the regex.
         // For tags that require a closing element, require BOTH opening and closing to be present —
@@ -785,6 +788,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             type: 'toolPendingEdit', id, path: tool.path, diff,
                             autoApplied: true, success: true,
                         });
+                        didRead = true;
                     } catch (err) {
                         const msg = err instanceof Error ? err.message : String(err);
                         this.conversationHistory.push({
@@ -834,6 +838,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             type: 'toolPendingEdit', id, path: tool.path, diff,
                             isPatch: true, autoApplied: true, success: true,
                         });
+                        didRead = true;
                     } catch (err) {
                         const msg = err instanceof Error ? err.message : String(err);
                         this.conversationHistory.push({
@@ -845,7 +850,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             type: 'toolPendingEdit', id, path: tool.path, diff,
                             isPatch: true, autoApplied: true, success: false, error: msg,
                         });
-                        didRead = true; // let model react to the error
+                        didRead = true;
                     }
                 } else {
                     // ask mode
@@ -866,7 +871,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         content: `[Tool result: search_files "${tool.query}"]\n${result}`,
                     });
                     this.saveHistory();
-                    this.webviewView.webview.postMessage({ type: 'toolRead', path: `search: ${tool.query}` });
+                    this.webviewView.webview.postMessage({
+                        type: 'toolSearch', query: tool.query, glob: tool.glob, content: result,
+                    });
                     didRead = true;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
@@ -875,6 +882,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         content: `[Tool result: search_files "${tool.query}"]\nError: ${msg}`,
                     });
                     this.saveHistory();
+                    this.webviewView.webview.postMessage({
+                        type: 'toolSearch', query: tool.query, glob: tool.glob, error: msg,
+                    });
                     didRead = true;
                 }
                 continue;
@@ -891,8 +901,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         });
                         this.saveHistory();
                         this.webviewView.webview.postMessage({
-                            type: 'toolPendingBash', id, command: `delete: ${tool.path}`,
-                            autoApplied: true, success: true, output: 'File deleted.',
+                            type: 'toolPendingBash', id, command: `delete ${tool.path}`,
+                            toolOp: 'delete', autoApplied: true, success: true, output: 'File deleted.',
                         });
                         didRead = true;
                     } catch (err) {
@@ -903,15 +913,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         });
                         this.saveHistory();
                         this.webviewView.webview.postMessage({
-                            type: 'toolPendingBash', id, command: `delete: ${tool.path}`,
-                            autoApplied: true, success: false, output: msg,
+                            type: 'toolPendingBash', id, command: `delete ${tool.path}`,
+                            toolOp: 'delete', autoApplied: true, success: false, output: msg,
                         });
                         didRead = true;
                     }
                 } else {
                     this.pendingTools.set(id, { type: 'delete', path: tool.path });
                     this.webviewView.webview.postMessage({
-                        type: 'toolPendingBash', id, command: `delete: ${tool.path}`,
+                        type: 'toolPendingBash', id, command: `delete ${tool.path}`,
+                        toolOp: 'delete',
                     });
                 }
                 continue;
@@ -928,8 +939,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         });
                         this.saveHistory();
                         this.webviewView.webview.postMessage({
-                            type: 'toolPendingBash', id, command: `mkdir: ${tool.path}`,
-                            autoApplied: true, success: true, output: 'Directory created.',
+                            type: 'toolPendingBash', id, command: `mkdir ${tool.path}`,
+                            toolOp: 'mkdir', autoApplied: true, success: true, output: 'Directory created.',
                         });
                         didRead = true;
                     } catch (err) {
@@ -940,15 +951,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         });
                         this.saveHistory();
                         this.webviewView.webview.postMessage({
-                            type: 'toolPendingBash', id, command: `mkdir: ${tool.path}`,
-                            autoApplied: true, success: false, output: msg,
+                            type: 'toolPendingBash', id, command: `mkdir ${tool.path}`,
+                            toolOp: 'mkdir', autoApplied: true, success: false, output: msg,
                         });
                         didRead = true;
                     }
                 } else {
                     this.pendingTools.set(id, { type: 'mkdir', path: tool.path });
                     this.webviewView.webview.postMessage({
-                        type: 'toolPendingBash', id, command: `mkdir: ${tool.path}`,
+                        type: 'toolPendingBash', id, command: `mkdir ${tool.path}`,
+                        toolOp: 'mkdir',
                     });
                 }
                 continue;
@@ -965,8 +977,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         });
                         this.saveHistory();
                         this.webviewView.webview.postMessage({
-                            type: 'toolPendingBash', id, command: `rename: ${tool.from} → ${tool.to}`,
-                            autoApplied: true, success: true, output: 'File renamed.',
+                            type: 'toolPendingBash', id, command: `rename ${tool.from} → ${tool.to}`,
+                            toolOp: 'rename', autoApplied: true, success: true, output: 'File renamed.',
                         });
                         didRead = true;
                     } catch (err) {
@@ -977,15 +989,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         });
                         this.saveHistory();
                         this.webviewView.webview.postMessage({
-                            type: 'toolPendingBash', id, command: `rename: ${tool.from} → ${tool.to}`,
-                            autoApplied: true, success: false, output: msg,
+                            type: 'toolPendingBash', id, command: `rename ${tool.from} → ${tool.to}`,
+                            toolOp: 'rename', autoApplied: true, success: false, output: msg,
                         });
                         didRead = true;
                     }
                 } else {
                     this.pendingTools.set(id, { type: 'rename', from: tool.from, to: tool.to });
                     this.webviewView.webview.postMessage({
-                        type: 'toolPendingBash', id, command: `rename: ${tool.from} → ${tool.to}`,
+                        type: 'toolPendingBash', id, command: `rename ${tool.from} → ${tool.to}`,
+                        toolOp: 'rename',
                     });
                 }
                 continue;
@@ -1321,7 +1334,7 @@ function stripToolTagsForExport(text: string): string {
         .replace(/<create_dir\b[^>]*(?:\/>|>\s*<\/create_dir>)/g, '')
         .replace(/<rename_file\b[^>]*(?:\/>|>\s*<\/rename_file>)/g, '')
         .replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, '')
-        .replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call>/g, '')
+        .replace(/<\|?tool_call\|?[^>]*>[\s\S]*?<\|?\/?tool_call\|?>/g, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }

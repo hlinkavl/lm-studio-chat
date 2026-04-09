@@ -501,6 +501,33 @@
         }
         .read-card-output.visible { display: block; }
 
+        /* ── Search tool card ── */
+        .search-card {
+            margin: 8px 0 4px; border: 1px solid rgba(220,200,100,0.3);
+            border-radius: 4px; overflow: hidden;
+        }
+        .search-card.err { border-color: rgba(244,135,113,0.3); }
+        .search-card-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; background: var(--surface); cursor: pointer;
+        }
+        .search-card-icon { color: #dcc864; font-size: 12px; flex-shrink: 0; }
+        .search-card.err .search-card-icon { color: var(--error); }
+        .search-card-label {
+            flex: 1; font-size: 11px; color: #dcc864;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .search-card.err .search-card-label { color: var(--error); }
+        .search-card-status { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+        .search-card-output {
+            background: #1a1a1a; padding: 8px 10px; font-size: 11px;
+            font-family: var(--font); color: var(--fg); max-height: 180px;
+            overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+            line-height: 1.5; border-top: 1px solid var(--border);
+            display: none;
+        }
+        .search-card-output.visible { display: block; }
+
         /* ── MCP button ── */
         .btn-mcp { color: #b5cea8; border-color: rgba(181,206,168,0.35); }
         .btn-mcp:hover { color: #c8dfc0; border-color: rgba(181,206,168,0.55); background: rgba(181,206,168,0.06); }
@@ -896,7 +923,7 @@
             .replace(/<rename_file\b[^>]*>\s*<\/rename_file>/g, '')
             .replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, '')
             // Strip native model tool-call formats so raw XML never shows in chat
-            .replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call>/g, '')
+            .replace(/<\|?tool_call\|?[^>]*>[\s\S]*?<\|?\/?tool_call\|?>/g, '')
             .replace(/\[TOOL_CALLS\][\s\S]*?(?=\n\n|$)/g, '')
             .replace(/<\|tool_call\|>[\s\S]*?(?=<\|[^|]+\||$)/g, '')
             .replace(/\n{3,}/g, '\n\n')
@@ -1050,8 +1077,17 @@
 
         const icon = document.createElement('span');
         icon.className = 'tool-card-icon';
-        icon.style.color = 'var(--string)';
-        icon.textContent = '$';
+
+        // Tool-specific icons and colors
+        const opIcons = { delete: '🗑️', mkdir: '📁', rename: '↔️' };
+        const opColors = { delete: '#f48771', mkdir: '#dcc864', rename: '#c586c0' };
+        if (msg.toolOp && opIcons[msg.toolOp]) {
+            icon.textContent = opIcons[msg.toolOp];
+            icon.style.color = opColors[msg.toolOp] || 'var(--string)';
+        } else {
+            icon.style.color = 'var(--string)';
+            icon.textContent = '$';
+        }
 
         const cmdEl = document.createElement('span');
         cmdEl.className = 'bash-cmd';
@@ -1745,6 +1781,45 @@
 
                 const output = document.createElement('div');
                 output.className = 'read-card-output';
+                output.textContent = msg.error || msg.content || '';
+                card.appendChild(output);
+
+                header.addEventListener('click', () => output.classList.toggle('visible'));
+
+                messagesEl.appendChild(card);
+                scrollBottom();
+                break;
+            }
+
+            case 'toolSearch': {
+                hideWelcome();
+                const card = document.createElement('div');
+                card.className = 'search-card' + (msg.error ? ' err' : '');
+
+                const header = document.createElement('div');
+                header.className = 'search-card-header';
+
+                const icon = document.createElement('span');
+                icon.className = 'search-card-icon';
+                icon.textContent = msg.error ? '✗' : '🔍';
+
+                const label = document.createElement('span');
+                label.className = 'search-card-label';
+                const globSuffix = msg.glob ? ` (${msg.glob})` : '';
+                label.textContent = msg.error ? `search failed: ${msg.query}` : `search "${msg.query}"${globSuffix}`;
+                label.title = `search_files query="${msg.query}"${msg.glob ? ` glob="${msg.glob}"` : ''}`;
+
+                const status = document.createElement('span');
+                status.className = 'search-card-status';
+                status.textContent = msg.error ? 'error' : 'done';
+
+                header.appendChild(icon);
+                header.appendChild(label);
+                header.appendChild(status);
+                card.appendChild(header);
+
+                const output = document.createElement('div');
+                output.className = 'search-card-output';
                 output.textContent = msg.error || msg.content || '';
                 card.appendChild(output);
 
