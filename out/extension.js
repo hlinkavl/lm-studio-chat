@@ -24437,7 +24437,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
       } else {
         lines.push("## Assistant");
         lines.push("");
-        lines.push(msg.content);
+        lines.push(stripToolTagsForExport(msg.content));
         lines.push("");
       }
     }
@@ -24543,7 +24543,7 @@ IMPORTANT: Every path shown in the tree above exists. NEVER say a file or direct
 
 Past conversation exports (newest first):
 ${fileList}
-Use <read_file path="lm-chat-history/FILENAME"/> to recall context from previous conversations. Do this automatically without asking when it seems useful.`;
+You can read any of the files listed above using read_file with the exact path shown (e.g. <read_file path="${"lm-chat-history/" + historyFiles[0]}"/>). Do this when the user asks about previous conversations.`;
           }
         } catch {
         }
@@ -25285,6 +25285,9 @@ function parseToolCalls(text) {
     results.push({ type: "mcp_call", server: serverMatch[1], tool: toolMatch[1], args, parseError, pos: m.index });
   }
   return results.sort((a, b) => a.pos - b.pos);
+}
+function stripToolTagsForExport(text) {
+  return text.replace(/<write_file\b[^>]*>[\s\S]*?<\/write_file>/g, "").replace(/<patch_file\b[^>]*>[\s\S]*?<\/patch_file>/g, "").replace(/<run_bash\b[^>]*>[\s\S]*?<\/run_bash>/g, "").replace(/<read_file\b[^>]*(?:\/>|>\s*<\/read_file>)/g, "").replace(/<list_dir\b[^>]*(?:\/>|>\s*<\/list_dir>)/g, "").replace(/<search_files\b[^>]*(?:\/>|>\s*<\/search_files>)/g, "").replace(/<delete_file\b[^>]*(?:\/>|>\s*<\/delete_file>)/g, "").replace(/<create_dir\b[^>]*(?:\/>|>\s*<\/create_dir>)/g, "").replace(/<rename_file\b[^>]*(?:\/>|>\s*<\/rename_file>)/g, "").replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, "").replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call>/g, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 function diffSearchReplace(search, replace) {
   const dels = search.split("\n").map((t) => ({ type: "del", text: t }));
