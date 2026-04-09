@@ -1313,41 +1313,58 @@ function parseToolCalls(text: string): ToolCall[] {
         results.push({ type: 'run_bash', command, pos: m.index });
     }
 
-    // read_file — self-closing or empty element
-    const readRe = /<read_file\b[^>]*\bpath=["']([^"']+)["'][^>]*(?:\/>|>\s*<\/read_file>)/g;
+    // Helper: extract an attribute value — supports quoted ("val", 'val') and unquoted (val) forms
+    function attr(tag: string, name: string): string | undefined {
+        // Also accept common aliases: file= for path=
+        const aliases = name === 'path' ? `(?:path|file)` : name;
+        const qm = tag.match(new RegExp(`\\b${aliases}\\s*=\\s*["']([^"']+)["']`));
+        if (qm) { return qm[1]; }
+        // Unquoted: capture everything up to whitespace, >, or /> but allow / in paths
+        const um = tag.match(new RegExp(`\\b${aliases}\\s*=\\s*([^\\s>"']+?)(?=\\s|\\/>|>|$)`));
+        return um?.[1];
+    }
+
+    // read_file — lenient: accepts />, ></read_file>, or bare >
+    const readRe = /<read_file\b[^>]*(?:path|file)\s*=[^>]*(?:\/>|>\s*(?:<\/read_file\s*>)?)/gi;
     while ((m = readRe.exec(text)) !== null) {
-        results.push({ type: 'read_file', path: m[1], pos: m.index });
+        const p = attr(m[0], 'path');
+        if (p) { results.push({ type: 'read_file', path: p, pos: m.index }); }
     }
 
-    // list_dir — self-closing or empty element
-    const listRe = /<list_dir\b[^>]*\bpath=["']([^"']+)["'][^>]*(?:\/>|>\s*<\/list_dir>)/g;
+    // list_dir — lenient
+    const listRe = /<list_dir\b[^>]*(?:path|file)\s*=[^>]*(?:\/>|>\s*(?:<\/list_dir\s*>)?)/gi;
     while ((m = listRe.exec(text)) !== null) {
-        results.push({ type: 'list_dir', path: m[1], pos: m.index });
+        const p = attr(m[0], 'path');
+        if (p) { results.push({ type: 'list_dir', path: p, pos: m.index }); }
     }
 
-    // search_files — <search_files query="..." glob="*.ts"/>
-    const searchRe = /<search_files\b[^>]*\bquery=["']([^"']+)["'][^>]*(?:\/>|>\s*<\/search_files>)/g;
+    // search_files — lenient
+    const searchRe = /<search_files\b[^>]*query\s*=[^>]*(?:\/>|>\s*(?:<\/search_files\s*>)?)/gi;
     while ((m = searchRe.exec(text)) !== null) {
-        const globMatch = m[0].match(/\bglob=["']([^"']+)["']/);
-        results.push({ type: 'search_files', query: m[1], glob: globMatch?.[1], pos: m.index });
+        const q = attr(m[0], 'query');
+        if (q) { results.push({ type: 'search_files', query: q, glob: attr(m[0], 'glob'), pos: m.index }); }
     }
 
-    // delete_file — self-closing or empty element
-    const deleteRe = /<delete_file\b[^>]*\bpath=["']([^"']+)["'][^>]*(?:\/>|>\s*<\/delete_file>)/g;
+    // delete_file — lenient
+    const deleteRe = /<delete_file\b[^>]*(?:path|file)\s*=[^>]*(?:\/>|>\s*(?:<\/delete_file\s*>)?)/gi;
     while ((m = deleteRe.exec(text)) !== null) {
-        results.push({ type: 'delete_file', path: m[1], pos: m.index });
+        const p = attr(m[0], 'path');
+        if (p) { results.push({ type: 'delete_file', path: p, pos: m.index }); }
     }
 
-    // create_dir — self-closing or empty element
-    const mkdirRe = /<create_dir\b[^>]*\bpath=["']([^"']+)["'][^>]*(?:\/>|>\s*<\/create_dir>)/g;
+    // create_dir — lenient
+    const mkdirRe = /<create_dir\b[^>]*(?:path|file)\s*=[^>]*(?:\/>|>\s*(?:<\/create_dir\s*>)?)/gi;
     while ((m = mkdirRe.exec(text)) !== null) {
-        results.push({ type: 'create_dir', path: m[1], pos: m.index });
+        const p = attr(m[0], 'path');
+        if (p) { results.push({ type: 'create_dir', path: p, pos: m.index }); }
     }
 
-    // rename_file — <rename_file from="..." to="..."/>
-    const renameRe = /<rename_file\b[^>]*\bfrom=["']([^"']+)["'][^>]*\bto=["']([^"']+)["'][^>]*(?:\/>|>\s*<\/rename_file>)/g;
+    // rename_file — lenient
+    const renameRe = /<rename_file\b[^>]*from\s*=[^>]*to\s*=[^>]*(?:\/>|>\s*(?:<\/rename_file\s*>)?)/gi;
     while ((m = renameRe.exec(text)) !== null) {
-        results.push({ type: 'rename_file', from: m[1], to: m[2], pos: m.index });
+        const f = attr(m[0], 'from');
+        const t = attr(m[0], 'to');
+        if (f && t) { results.push({ type: 'rename_file', from: f, to: t, pos: m.index }); }
     }
 
     // mcp_call — <mcp_call server="name" tool="toolname">{"json":"args"}</mcp_call>
@@ -1378,12 +1395,12 @@ function stripToolTagsForExport(text: string): string {
         .replace(/<write_file\b[^>]*>[\s\S]*?<\/write_file>/g, '')
         .replace(/<patch_file\b[^>]*>[\s\S]*?<\/patch_file>/g, '')
         .replace(/<run_bash\b[^>]*>[\s\S]*?<\/run_bash>/g, '')
-        .replace(/<read_file\b[^>]*(?:\/>|>\s*<\/read_file>)/g, '')
-        .replace(/<list_dir\b[^>]*(?:\/>|>\s*<\/list_dir>)/g, '')
-        .replace(/<search_files\b[^>]*(?:\/>|>\s*<\/search_files>)/g, '')
-        .replace(/<delete_file\b[^>]*(?:\/>|>\s*<\/delete_file>)/g, '')
-        .replace(/<create_dir\b[^>]*(?:\/>|>\s*<\/create_dir>)/g, '')
-        .replace(/<rename_file\b[^>]*(?:\/>|>\s*<\/rename_file>)/g, '')
+        .replace(/<read_file\b[^>]*(?:\/>|>\s*(?:<\/read_file\s*>)?)/gi, '')
+        .replace(/<list_dir\b[^>]*(?:\/>|>\s*(?:<\/list_dir\s*>)?)/gi, '')
+        .replace(/<search_files\b[^>]*(?:\/>|>\s*(?:<\/search_files\s*>)?)/gi, '')
+        .replace(/<delete_file\b[^>]*(?:\/>|>\s*(?:<\/delete_file\s*>)?)/gi, '')
+        .replace(/<create_dir\b[^>]*(?:\/>|>\s*(?:<\/create_dir\s*>)?)/gi, '')
+        .replace(/<rename_file\b[^>]*(?:\/>|>\s*(?:<\/rename_file\s*>)?)/gi, '')
         .replace(/<mcp_call\b[^>]*>[\s\S]*?<\/mcp_call>/g, '')
         .replace(/<\|?tool_call\|?[^>]*>[\s\S]*?<\|?\/?tool_call\|?>/g, '')
         .replace(/\n{3,}/g, '\n\n')
