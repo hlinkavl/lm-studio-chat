@@ -1,4 +1,6 @@
 node_modules/
+out/*.js
+!out/extension.js
 out/*.js.map
 out/*.d.ts
 *.vsix
