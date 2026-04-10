@@ -7909,11 +7909,60 @@ Expand the <search> block to include more surrounding context so it matches exac
     const wsRoot = workspaceFolder.uri.fsPath;
     const absPath = path2.isAbsolute(dirPath) ? dirPath : path2.join(wsRoot, dirPath);
     this.assertInWorkspace(absPath, wsRoot);
-    let entries;
+    let resolvedPath = absPath;
+    let resolvedLabel = dirPath;
+    let entries = null;
     try {
       entries = await vscode3.workspace.fs.readDirectory(vscode3.Uri.file(absPath));
     } catch {
-      throw new Error(`list_dir: directory not found: "${dirPath}"`);
+    }
+    if (!entries) {
+      const dirName = path2.basename(dirPath);
+      const filesInside = await vscode3.workspace.findFiles(
+        `**/${dirName}/*`,
+        "**/node_modules/**",
+        50
+      );
+      const filesDeeper = await vscode3.workspace.findFiles(
+        `**/${dirName}/**/*`,
+        "**/node_modules/**",
+        50
+      );
+      const allFiles = [...filesInside, ...filesDeeper];
+      const candidateDirs = /* @__PURE__ */ new Set();
+      const lowerDirName = dirName.toLowerCase();
+      for (const f of allFiles) {
+        const rel = path2.relative(wsRoot, f.fsPath).replace(/\\/g, "/");
+        const parts = rel.split("/");
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (parts[i].toLowerCase() === lowerDirName) {
+            candidateDirs.add(parts.slice(0, i + 1).join("/"));
+            break;
+          }
+        }
+      }
+      if (candidateDirs.size === 0) {
+        throw new Error(
+          `list_dir: directory not found: "${dirPath}".
+No directory named "${dirName}" exists in the workspace. Use the workspace file tree or <search_files> to find the correct path.`
+        );
+      }
+      if (candidateDirs.size === 1) {
+        const resolvedRel = [...candidateDirs][0];
+        resolvedPath = path2.join(wsRoot, resolvedRel);
+        resolvedLabel = resolvedRel;
+        try {
+          entries = await vscode3.workspace.fs.readDirectory(vscode3.Uri.file(resolvedPath));
+        } catch {
+          throw new Error(`list_dir: directory not found: "${dirPath}"`);
+        }
+      } else {
+        const sorted = [...candidateDirs].sort();
+        throw new Error(
+          `"${dirPath}" is ambiguous \u2014 found ${sorted.length} directories:
+` + sorted.map((p) => `  - ${p}`).join("\n") + "\nAsk the user which one they meant and retry with the full path."
+        );
+      }
     }
     entries.sort(([aName, aType], [bName, bType]) => {
       const aIsDir = aType === vscode3.FileType.Directory ? 0 : 1;
@@ -7924,7 +7973,9 @@ Expand the <search> block to include more surrounding context so it matches exac
       const label = type === vscode3.FileType.Directory ? "[dir] " : "[file]";
       return `${label} ${name}`;
     });
-    return `Contents of "${dirPath}":
+    const header = resolvedLabel !== dirPath ? `[Resolved "${dirPath}" \u2192 "${resolvedLabel}"]
+Contents of "${resolvedLabel}":` : `Contents of "${dirPath}":`;
+    return `${header}
 ${lines.join("\n")}`;
   }
   async computeDiff(filePath, newContent) {
@@ -24447,14 +24498,14 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     const pad = (n) => String(n).padStart(2, "0");
     const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     const filename = `chat-${timestamp}.md`;
-    const exportDir = path4.join(wsFolder.uri.fsPath, "lm-chat-history");
+    const exportDir = path4.join(wsFolder.uri.fsPath, ".lm-chat", "chat-history");
     fs3.mkdirSync(exportDir, { recursive: true });
     const filePath = path4.join(exportDir, filename);
     const content = this.formatConversation();
     fs3.writeFileSync(filePath, content, "utf-8");
     const doc = await vscode4.workspace.openTextDocument(vscode4.Uri.file(filePath));
     await vscode4.window.showTextDocument(doc, { preview: true });
-    vscode4.window.showInformationMessage(`Conversation saved to lm-chat-history/${filename}`);
+    vscode4.window.showInformationMessage(`Conversation saved to .lm-chat/chat-history/${filename}`);
   }
   formatConversation() {
     const lines = [];
@@ -24583,21 +24634,39 @@ File tree (use these exact paths in tool calls):
 ${tree}
 
 IMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist \u2014 use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.`;
-      const historyDir = path4.join(wsPath, "lm-chat-history");
+      const historyDir = path4.join(wsPath, ".lm-chat", "chat-history");
       if (fs3.existsSync(historyDir)) {
         try {
           const historyFiles = fs3.readdirSync(historyDir).filter((f) => f.endsWith(".md") || f.endsWith(".txt")).sort().reverse();
           if (historyFiles.length > 0) {
-            const fileList = historyFiles.slice(0, 10).map((f) => `  lm-chat-history/${f}`).join("\n");
+            const fileList = historyFiles.slice(0, 10).map((f) => `  .lm-chat/chat-history/${f}`).join("\n");
             prompt += `
 
 Past conversation exports (newest first):
 ${fileList}
-You can read any of the files listed above using read_file with the exact path shown (e.g. <read_file path="${"lm-chat-history/" + historyFiles[0]}"/>). Do this when the user asks about previous conversations.`;
+You can read any of the files listed above using read_file with the exact path shown (e.g. <read_file path="${".lm-chat/chat-history/" + historyFiles[0]}"/>). Do this when the user asks about previous conversations.`;
           }
         } catch {
         }
       }
+      const skillsDir = path4.join(wsPath, ".lm-chat", "skills");
+      if (fs3.existsSync(skillsDir)) {
+        try {
+          const skillFiles = fs3.readdirSync(skillsDir).filter((f) => f.endsWith(".md") || f.endsWith(".json")).sort();
+          if (skillFiles.length > 0) {
+            const skillList = skillFiles.slice(0, 20).map((f) => `  .lm-chat/skills/${f}`).join("\n");
+            prompt += `
+
+Available skills:
+${skillList}
+You can read any skill file using read_file with the exact path shown. Skills define reusable instructions or workflows you can follow when the user asks.`;
+          }
+        } catch {
+        }
+      }
+      prompt += `
+
+The .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/ and skills are in .lm-chat/skills/. Use these paths for any file operations related to conversations or skills.`;
     }
     prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
     return prompt;

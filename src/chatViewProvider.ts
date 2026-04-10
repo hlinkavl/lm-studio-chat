@@ -460,7 +460,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
         const filename = `chat-${timestamp}.md`;
 
-        const exportDir = path.join(wsFolder.uri.fsPath, 'lm-chat-history');
+        const exportDir = path.join(wsFolder.uri.fsPath, '.lm-chat', 'chat-history');
         fs.mkdirSync(exportDir, { recursive: true });
 
         const filePath = path.join(exportDir, filename);
@@ -469,7 +469,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
         await vscode.window.showTextDocument(doc, { preview: true });
-        vscode.window.showInformationMessage(`Conversation saved to lm-chat-history/${filename}`);
+        vscode.window.showInformationMessage(`Conversation saved to .lm-chat/chat-history/${filename}`);
     }
 
     private formatConversation(): string {
@@ -613,7 +613,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             prompt += `\n\nCurrent workspace: ${wsPath}\n\nFile tree (use these exact paths in tool calls):\n${tree}\n\nIMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist — use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.`;
 
             // Chat history folder hint — list actual files so the model can read them directly
-            const historyDir = path.join(wsPath, 'lm-chat-history');
+            const historyDir = path.join(wsPath, '.lm-chat', 'chat-history');
             if (fs.existsSync(historyDir)) {
                 try {
                     const historyFiles = fs.readdirSync(historyDir)
@@ -621,11 +621,26 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         .sort()
                         .reverse(); // newest first
                     if (historyFiles.length > 0) {
-                        const fileList = historyFiles.slice(0, 10).map(f => `  lm-chat-history/${f}`).join('\n');
-                        prompt += `\n\nPast conversation exports (newest first):\n${fileList}\nYou can read any of the files listed above using read_file with the exact path shown (e.g. <read_file path="${'lm-chat-history/' + historyFiles[0]}"/>). Do this when the user asks about previous conversations.`;
+                        const fileList = historyFiles.slice(0, 10).map(f => `  .lm-chat/chat-history/${f}`).join('\n');
+                        prompt += `\n\nPast conversation exports (newest first):\n${fileList}\nYou can read any of the files listed above using read_file with the exact path shown (e.g. <read_file path="${'.lm-chat/chat-history/' + historyFiles[0]}"/>). Do this when the user asks about previous conversations.`;
                     }
                 } catch { /* ignore read errors */ }
             }
+
+            // Skills folder hint
+            const skillsDir = path.join(wsPath, '.lm-chat', 'skills');
+            if (fs.existsSync(skillsDir)) {
+                try {
+                    const skillFiles = fs.readdirSync(skillsDir)
+                        .filter(f => f.endsWith('.md') || f.endsWith('.json'))
+                        .sort();
+                    if (skillFiles.length > 0) {
+                        const skillList = skillFiles.slice(0, 20).map(f => `  .lm-chat/skills/${f}`).join('\n');
+                        prompt += `\n\nAvailable skills:\n${skillList}\nYou can read any skill file using read_file with the exact path shown. Skills define reusable instructions or workflows you can follow when the user asks.`;
+                    }
+                } catch { /* ignore read errors */ }
+            }
+            prompt += `\n\nThe .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/ and skills are in .lm-chat/skills/. Use these paths for any file operations related to conversations or skills.`;
         }
         prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
         return prompt;
