@@ -198,7 +198,7 @@ export class McpManager {
             }
 
             const client = new Client(
-                { name: 'lm-studio-chat', version: '1.0.0' },
+                { name: 'lm-chat', version: '1.0.0' },
                 { capabilities: {} }
             );
 

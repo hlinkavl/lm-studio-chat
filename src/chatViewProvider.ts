@@ -93,14 +93,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
 
                 case 'updateSystemPrompt': {
-                    const config = vscode.workspace.getConfiguration('lmStudioChat');
+                    const config = vscode.workspace.getConfiguration('lmChat');
                     await config.update('systemPrompt', message.text, vscode.ConfigurationTarget.Global);
                     break;
                 }
 
                 case 'openSettings':
                 case 'changeEndpoint':
-                    await vscode.commands.executeCommand('lmStudioChat.setEndpoint');
+                    await vscode.commands.executeCommand('lmChat.setEndpoint');
                     break;
 
                 case 'selectModel':
@@ -108,7 +108,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
 
                 case 'setContextLimit': {
-                    const config = vscode.workspace.getConfiguration('lmStudioChat');
+                    const config = vscode.workspace.getConfiguration('lmChat');
                     const current = config.get<number>('contextLimit', 0);
                     const input = await vscode.window.showInputBox({
                         title: 'Context Window Limit (tokens)',
@@ -421,7 +421,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     private sendTokenUsage(usage: TokenUsage): void {
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         const contextLimit = config.get<number>('contextLimit', 0);
         this.webviewView?.webview.postMessage({
             type: 'tokenUsage',
@@ -440,7 +440,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this.lastUsage = null;
         this.saveHistory();
         this.webviewView?.webview.postMessage({ type: 'reset' });
-        vscode.window.showInformationMessage('LM Studio Chat: Conversation cleared');
+        vscode.window.showInformationMessage('LM Chat: Conversation cleared');
     }
 
     public async exportConversation(): Promise<void> {
@@ -476,7 +476,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         const lines: string[] = [];
         const now = new Date().toLocaleString();
 
-        lines.push('# LM Studio Chat Export');
+        lines.push('# LM Chat Export');
         lines.push('');
         lines.push(`**Exported:** ${now}`);
         if (this.currentModel) {
@@ -520,7 +520,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     private sendCurrentConfig(): void {
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         this.webviewView?.webview.postMessage({
             type: 'configUpdate',
             endpoint:     config.get<string>('endpoint', 'http://127.0.0.1:1234'),
@@ -536,7 +536,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             return;
         }
 
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         const currentModel = config.get<string>('model', '');
 
         const items: vscode.QuickPickItem[] = [
@@ -567,7 +567,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private async handleHealthCheck(): Promise<void> {
         const health = await this.client.checkHealth();
         if (health.ok && health.models?.length) {
-            const config = vscode.workspace.getConfiguration('lmStudioChat');
+            const config = vscode.workspace.getConfiguration('lmChat');
             const configured = config.get<string>('model', '');
             this.currentModel = configured || health.models[0];
         }
@@ -580,7 +580,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     // ── System prompt builder ────────────────────────────────────────────────
 
     private async buildSystemPrompt(): Promise<string> {
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         let prompt = config.get<string>('systemPrompt', '');
         if (this.workspaceMode) {
             const wsFolder  = vscode.workspace.workspaceFolders?.[0];
@@ -655,7 +655,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this.toolIterations = 0;
         this.systemPromptCache = await this.buildSystemPrompt();
 
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         const messages: ChatMessage[] = [];
         if (this.systemPromptCache) {
             messages.push({ role: 'system', content: this.systemPromptCache });
@@ -1186,7 +1186,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private continueAfterToolResult(): void {
         this.toolIterations++;
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         const maxIter = config.get<number>('maxToolIterations', 10);
         if (this.toolIterations >= maxIter) {
             this.webviewView?.webview.postMessage({
@@ -1208,7 +1208,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (!this.webviewView) { return; }
 
         // Reuse system prompt built at start of this turn — avoids redundant workspace tree reads
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         const messages: ChatMessage[] = [];
         if (this.systemPromptCache) {
             messages.push({ role: 'system', content: this.systemPromptCache });

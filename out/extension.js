@@ -7318,7 +7318,7 @@ var LmStudioClient = class {
     this.abortController = null;
   }
   getConfig() {
-    const config2 = vscode.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode.workspace.getConfiguration("lmChat");
     return {
       endpoint: config2.get("endpoint", "http://127.0.0.1:1234"),
       model: config2.get("model", ""),
@@ -23959,7 +23959,7 @@ var McpManager = class {
         transport = new SSEClientTransport(new URL(cfg.config.url));
       }
       const client2 = new Client(
-        { name: "lm-studio-chat", version: "1.0.0" },
+        { name: "lm-chat", version: "1.0.0" },
         { capabilities: {} }
       );
       await Promise.race([
@@ -24139,19 +24139,19 @@ var ChatViewProvider = class {
           await this.handleHealthCheck();
           break;
         case "updateSystemPrompt": {
-          const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+          const config2 = vscode4.workspace.getConfiguration("lmChat");
           await config2.update("systemPrompt", message.text, vscode4.ConfigurationTarget.Global);
           break;
         }
         case "openSettings":
         case "changeEndpoint":
-          await vscode4.commands.executeCommand("lmStudioChat.setEndpoint");
+          await vscode4.commands.executeCommand("lmChat.setEndpoint");
           break;
         case "selectModel":
           await this.showModelPicker();
           break;
         case "setContextLimit": {
-          const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+          const config2 = vscode4.workspace.getConfiguration("lmChat");
           const current = config2.get("contextLimit", 0);
           const input = await vscode4.window.showInputBox({
             title: "Context Window Limit (tokens)",
@@ -24464,7 +24464,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     });
   }
   sendTokenUsage(usage) {
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     const contextLimit = config2.get("contextLimit", 0);
     this.webviewView?.webview.postMessage({
       type: "tokenUsage",
@@ -24482,7 +24482,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     this.lastUsage = null;
     this.saveHistory();
     this.webviewView?.webview.postMessage({ type: "reset" });
-    vscode4.window.showInformationMessage("LM Studio Chat: Conversation cleared");
+    vscode4.window.showInformationMessage("LM Chat: Conversation cleared");
   }
   async exportConversation() {
     if (this.conversationHistory.length === 0) {
@@ -24510,7 +24510,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
   formatConversation() {
     const lines = [];
     const now = (/* @__PURE__ */ new Date()).toLocaleString();
-    lines.push("# LM Studio Chat Export");
+    lines.push("# LM Chat Export");
     lines.push("");
     lines.push(`**Exported:** ${now}`);
     if (this.currentModel) {
@@ -24549,7 +24549,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     this.sendCurrentConfig();
   }
   sendCurrentConfig() {
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     this.webviewView?.webview.postMessage({
       type: "configUpdate",
       endpoint: config2.get("endpoint", "http://127.0.0.1:1234"),
@@ -24563,7 +24563,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
       vscode4.window.showWarningMessage("No models available. Is LM Studio running?");
       return;
     }
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     const currentModel = config2.get("model", "");
     const items = [
       {
@@ -24592,7 +24592,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
   async handleHealthCheck() {
     const health = await this.client.checkHealth();
     if (health.ok && health.models?.length) {
-      const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+      const config2 = vscode4.workspace.getConfiguration("lmChat");
       const configured = config2.get("model", "");
       this.currentModel = configured || health.models[0];
     }
@@ -24605,7 +24605,7 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
   }
   // ── System prompt builder ────────────────────────────────────────────────
   async buildSystemPrompt() {
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     let prompt = config2.get("systemPrompt", "");
     if (this.workspaceMode) {
       const wsFolder = vscode4.workspace.workspaceFolders?.[0];
@@ -24678,7 +24678,7 @@ The .lm-chat/ directory is your workspace data folder. Chat history exports are 
     }
     this.toolIterations = 0;
     this.systemPromptCache = await this.buildSystemPrompt();
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     const messages = [];
     if (this.systemPromptCache) {
       messages.push({ role: "system", content: this.systemPromptCache });
@@ -25274,7 +25274,7 @@ Error: ${msg}`
   }
   continueAfterToolResult() {
     this.toolIterations++;
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     const maxIter = config2.get("maxToolIterations", 10);
     if (this.toolIterations >= maxIter) {
       this.webviewView?.webview.postMessage({
@@ -25296,7 +25296,7 @@ Error: ${msg}`
     if (!this.webviewView) {
       return;
     }
-    const config2 = vscode4.workspace.getConfiguration("lmStudioChat");
+    const config2 = vscode4.workspace.getConfiguration("lmChat");
     const messages = [];
     if (this.systemPromptCache) {
       messages.push({ role: "system", content: this.systemPromptCache });
@@ -25499,19 +25499,19 @@ function activate(context) {
   const provider = new ChatViewProvider(context.extensionUri, context);
   context.subscriptions.push(
     vscode5.window.registerWebviewViewProvider(
-      "lmStudioChat.chatView",
+      "lmChat.chatView",
       provider,
       { webviewOptions: { retainContextWhenHidden: true } }
     )
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.newChat", () => {
+    vscode5.commands.registerCommand("lmChat.newChat", () => {
       provider.resetConversation();
     })
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.setEndpoint", async () => {
-      const config2 = vscode5.workspace.getConfiguration("lmStudioChat");
+    vscode5.commands.registerCommand("lmChat.setEndpoint", async () => {
+      const config2 = vscode5.workspace.getConfiguration("lmChat");
       const current = config2.get("endpoint", "http://127.0.0.1:1234");
       const newEndpoint = await vscode5.window.showInputBox({
         prompt: "Enter LM Studio server URL",
@@ -25537,12 +25537,12 @@ function activate(context) {
     })
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.selectModel", async () => {
+    vscode5.commands.registerCommand("lmChat.selectModel", async () => {
       await provider.showModelPicker();
     })
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.openMcpConfig", async () => {
+    vscode5.commands.registerCommand("lmChat.openMcpConfig", async () => {
       const fs4 = await import("fs");
       const path5 = await import("path");
       const configPath = provider.mcpManager.getConfigFilePath();
@@ -25555,11 +25555,11 @@ function activate(context) {
     })
   );
   context.subscriptions.push(
-    vscode5.commands.registerCommand("lmStudioChat.exportConversation", async () => {
+    vscode5.commands.registerCommand("lmChat.exportConversation", async () => {
       await provider.exportConversation();
     })
   );
-  console.log("LM Studio Chat extension activated");
+  console.log("LM Chat extension activated");
 }
 function deactivate() {
 }

@@ -22,7 +22,7 @@ export class LmStudioClient {
     private abortController: AbortController | null = null;
 
     private getConfig() {
-        const config = vscode.workspace.getConfiguration('lmStudioChat');
+        const config = vscode.workspace.getConfiguration('lmChat');
         return {
             endpoint: config.get<string>('endpoint', 'http://127.0.0.1:1234'),
             model: config.get<string>('model', ''),

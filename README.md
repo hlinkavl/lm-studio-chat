@@ -1,4 +1,4 @@
-# LM Studio Chat
+# LM Chat
 
 A VS Code extension that brings a full agentic chat panel for your local [LM Studio](https://lmstudio.ai) models. Talk to any model running in LM Studio, give it access to your workspace, and let it read, write, and run commands — all without leaving VS Code.
 
@@ -34,28 +34,28 @@ A VS Code extension that brings a full agentic chat panel for your local [LM Stu
 
 ## Installation
 
-1. Download the latest `.vsix` from [Releases](https://github.com/hlinkavl/lm-studio-chat/releases)
+1. Download the latest `.vsix` from [Releases](https://github.com/hlinkavl/lm-chat/releases)
 2. In VS Code: `Extensions` → `...` → `Install from VSIX...`
-3. Open the **LM Studio Chat** panel from the bottom panel bar
+3. Open the **LM Chat** panel from the bottom panel bar
 
 ## Configuration
 
 | Setting | Default | Description |
 |---|---|---|
-| `lmStudioChat.endpoint` | `http://127.0.0.1:1234` | LM Studio API URL |
-| `lmStudioChat.model` | _(empty)_ | Model ID — leave empty to use the currently loaded model |
-| `lmStudioChat.maxTokens` | `2048` | Max tokens per response |
-| `lmStudioChat.temperature` | `0.7` | Sampling temperature (0.0 – 2.0) |
-| `lmStudioChat.maxHistoryMessages` | `50` | Conversation messages kept in context |
-| `lmStudioChat.maxToolIterations` | `10` | Max consecutive tool cycles per turn |
-| `lmStudioChat.systemPrompt` | _(built-in)_ | Override the default system prompt |
+| `lmChat.endpoint` | `http://127.0.0.1:1234` | LM Studio API URL |
+| `lmChat.model` | _(empty)_ | Model ID — leave empty to use the currently loaded model |
+| `lmChat.maxTokens` | `2048` | Max tokens per response |
+| `lmChat.temperature` | `0.7` | Sampling temperature (0.0 – 2.0) |
+| `lmChat.maxHistoryMessages` | `50` | Conversation messages kept in context |
+| `lmChat.maxToolIterations` | `10` | Max consecutive tool cycles per turn |
+| `lmChat.systemPrompt` | _(built-in)_ | Override the default system prompt |
 
 ## MCP Servers
 
 MCP servers are configured via a `mcp.json` file. Open it with:
 
 ```
-Ctrl+Shift+P → LM Studio Chat: Open MCP Config File
+Ctrl+Shift+P → LM Chat: Open MCP Config File
 ```
 
 The format is identical to VS Code and Claude Code:

@@ -7,7 +7,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Register the webview view provider
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
-            'lmStudioChat.chatView',
+            'lmChat.chatView',
             provider,
             { webviewOptions: { retainContextWhenHidden: true } }
         )
@@ -15,15 +15,15 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register "New Chat" command
     context.subscriptions.push(
-        vscode.commands.registerCommand('lmStudioChat.newChat', () => {
+        vscode.commands.registerCommand('lmChat.newChat', () => {
             provider.resetConversation();
         })
     );
 
     // Register "Set Endpoint" command
     context.subscriptions.push(
-        vscode.commands.registerCommand('lmStudioChat.setEndpoint', async () => {
-            const config = vscode.workspace.getConfiguration('lmStudioChat');
+        vscode.commands.registerCommand('lmChat.setEndpoint', async () => {
+            const config = vscode.workspace.getConfiguration('lmChat');
             const current = config.get<string>('endpoint', 'http://127.0.0.1:1234');
             
             const newEndpoint = await vscode.window.showInputBox({
@@ -54,14 +54,14 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register "Select Model" command
     context.subscriptions.push(
-        vscode.commands.registerCommand('lmStudioChat.selectModel', async () => {
+        vscode.commands.registerCommand('lmChat.selectModel', async () => {
             await provider.showModelPicker();
         })
     );
 
     // Register "Open MCP Config" command
     context.subscriptions.push(
-        vscode.commands.registerCommand('lmStudioChat.openMcpConfig', async () => {
+        vscode.commands.registerCommand('lmChat.openMcpConfig', async () => {
             const fs   = await import('fs');
             const path = await import('path');
             const configPath = provider.mcpManager.getConfigFilePath();
@@ -76,12 +76,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register "Export Conversation" command
     context.subscriptions.push(
-        vscode.commands.registerCommand('lmStudioChat.exportConversation', async () => {
+        vscode.commands.registerCommand('lmChat.exportConversation', async () => {
             await provider.exportConversation();
         })
     );
 
-    console.log('LM Studio Chat extension activated');
+    console.log('LM Chat extension activated');
 }
 
 export function deactivate() {}
