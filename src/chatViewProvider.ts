@@ -100,31 +100,33 @@ Slash-command skills you can invoke. When the user types a command listed here, 
 Call \`<read_file path=".lm-chat/MEMORY.md"/>\` and WAIT for the result before continuing. You need the current content to avoid duplicates and to merge new entries with existing ones.
 
 **Step 2 — Review the conversation and identify entries:**
-After you have the file content, review the conversation and collect entries in these categories (most important first):
-   **a) Failed attempts & wrong approaches:**
+After you have the file content, review the conversation and collect entries in ALL of these categories:
+   **a) Key information & discoveries:**
+   - Names of tables, views, columns, schemas, databases mentioned or worked with
+   - Names of functions, variables, classes, files, endpoints, APIs
+   - Connection strings, server names, port numbers (NOT passwords/tokens)
+   - Any concrete facts learned about the project, its data, or its structure
+   **b) Failed attempts & wrong approaches:**
    - Tool calls that failed and WHY (wrong path, bad syntax, missing arg, etc.)
    - Approaches that didn't work and what worked instead
    - Wrong assumptions that led to wasted turns
-   - Incorrect tool usage patterns (e.g. used write_file when patch_file was needed)
-   **b) Fixes & workarounds discovered:**
+   **c) Fixes & workarounds discovered:**
    - What finally solved the problem and the exact steps
    - Non-obvious solutions that took multiple tries to find
    - Edge cases or gotchas encountered
-   **c) User preferences & corrections:**
+   **d) User preferences & corrections:**
    - How the user wants things done (style, approach, workflow)
    - Corrections the user made ("no, do it this way")
-   **d) Project context:**
-   - Technical details not obvious from the code
-   - Architecture decisions and their reasoning
 
 **Step 3 — Write the updated file:**
 Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all existing entries from Step 1 PLUS the new entries from Step 2. Append new entries under a date heading:
    \`\`\`
    ## YYYY-MM-DD
+   - [INFO] Database has tables: orders, customers, products
+   - [INFO] View sales_summary joins orders + customers
    - [FAIL] Tried X but it failed because Y — use Z instead
    - [FIX] When encountering A, the solution is B
    - [PREF] User prefers X over Y
-   - [CTX] Project detail worth remembering
    \`\`\`
 Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
 When writing identifiers (table names, column names, view names, variable names, function names, etc.), copy them EXACTLY as they appeared in the conversation — character for character. NEVER use placeholders like "table_name", "the view", "mentioned table", etc. If a table was called sales_summary, write sales_summary. If you cannot recall the exact name, re-read the conversation above.
