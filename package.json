@@ -2,7 +2,7 @@
   "name": "lm-chat",
   "displayName": "LM Chat",
   "description": "Chat with your local LM Studio models directly in VS Code with workspace context",
-  "version": "1.1.6",
+  "version": "1.2.0",
   "publisher": "local",
   "license": "MIT",
   "repository": {

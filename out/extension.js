@@ -24191,7 +24191,33 @@ Tell the user what you saved, grouped by category.
 
 **CRITICAL:** This skill is NOT complete until you have called BOTH \`<read_file>\` AND \`<write_file>\`. If you only list insights without writing them, the memory is empty and the skill has failed. You MUST make the tool calls.
 
-Note: /recall and /forget are handled automatically by the extension \u2014 they do not need skill definitions here.
+---
+
+## /recall
+
+**Purpose:** Display everything currently saved in memory.
+
+**When invoked:** The user types \`/recall\`.
+
+**What happens:** The extension reads \`.lm-chat/MEMORY.md\` and reports how many entries are stored. Use this before starting a new task to check what the model already knows about the project.
+
+*Handled automatically by the extension \u2014 no model involvement required.*
+
+---
+
+## /forget
+
+**Purpose:** Wipe all saved memory and start fresh.
+
+**When invoked:** The user types \`/forget\`.
+
+**What happens:** The extension clears \`.lm-chat/MEMORY.md\` completely. Use this when memory has become stale, cluttered, or irrelevant to the current work.
+
+*Handled automatically by the extension \u2014 no model involvement required.*
+
+---
+
+You can add your own custom slash commands below. Each command needs a name (e.g. \`## /deploy\`), a purpose, and step-by-step instructions for the model to follow.
 `;
     fs3.writeFileSync(path4.join(root, "SKILLS.md"), defaultSkills, "utf-8");
   }
@@ -24656,7 +24682,7 @@ IMPORTANT: Every path shown in the tree above exists. NEVER say a file or direct
 === SKILLS (.lm-chat/SKILLS.md) ===
 ${skillsContent}
 === END SKILLS ===
-Built-in skills: /save (model-driven \u2014 save lessons to memory), /recall and /forget (handled by the extension automatically). When the user types /save or any custom slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
+When the user types a slash command, follow the matching skill instructions above exactly. /recall and /forget are handled by the extension automatically \u2014 do not attempt to handle them yourself. You can also edit .lm-chat/SKILLS.md to add new custom skills when asked.`;
           }
         } catch {
         }
