@@ -127,6 +127,7 @@ Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all exist
    - [CTX] Project detail worth remembering
    \`\`\`
 Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
+Strip ALL formatting before writing — no bold (**), no backticks (\\\`), no italics, no markdown markup of any kind. MEMORY.md must contain plain text only. For example write \`my_view\` as just my_view.
 
 **Step 4 — Confirm:**
 Tell the user what you saved, grouped by category.
