@@ -228,6 +228,9 @@
             background: #2d2d2d; color: var(--string);
             padding: 1px 4px; border-radius: 2px;
         }
+        .msg-body .slash-cmd {
+            color: var(--prompt); font-weight: 600;
+        }
         .msg-body pre {
             background: #2a2a2a; border: 1px solid var(--border);
             border-radius: 4px; padding: 10px 12px;
@@ -1017,6 +1020,9 @@
         s = s.replace(/^(?:---|___|\*\*\*)\s*$/gm, '<hr>');
         s = s.replace(/^&gt;\s?(.+)/gm, '<blockquote>$1</blockquote>');
         s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${escapeHtml(c)}</code>`);
+        // Color slash commands (e.g. /remember) — skip anything inside <code> tags
+        s = s.replace(/(<code>[\s\S]*?<\/code>)|((?:^|\s))(\/[a-zA-Z][\w-]*)(?=[\s.,;:!?)}\]<]|$)/gm,
+            (match, codeBlock, prefix, cmd) => codeBlock ? match : `${prefix}<span class="slash-cmd">${cmd}</span>`);
         s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
         s = s.replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>');
         s = s.replace(/\*(.+?)\*/g,         '<em>$1</em>');

@@ -61,6 +61,58 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         const savedHistory = context.globalState.get<ChatMessage[]>('chatHistory', []);
         this.conversationHistory = savedHistory;
+
+        this.scaffoldLmChatFolder();
+    }
+
+    // ── Auto-scaffold .lm-chat/ workspace folder ────────────────────────────
+
+    private scaffoldLmChatFolder(): void {
+        const wsFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!wsFolder) { return; }
+
+        const root = path.join(wsFolder.uri.fsPath, '.lm-chat');
+
+        // Only scaffold if the folder doesn't exist yet
+        if (fs.existsSync(root)) { return; }
+
+        fs.mkdirSync(path.join(root, 'chat-history'), { recursive: true });
+
+        // Blank memory file
+        fs.writeFileSync(path.join(root, 'MEMORY.md'), '', 'utf-8');
+
+        // Default skills file with /remember
+        const defaultSkills = `# Skills
+
+Slash-command skills you can invoke. When the user types a command listed here, follow the instructions exactly.
+
+---
+
+## /remember
+
+**Purpose:** Extract important information from the current conversation and save it to memory.
+
+**When invoked:** The user types \`/remember\` (with or without additional context).
+
+**Instructions:**
+1. Review the entire conversation so far.
+2. Identify key facts worth remembering for future sessions:
+   - User preferences, decisions, or corrections
+   - Project context, goals, or constraints
+   - Technical details that aren't obvious from the code alone
+   - Names, roles, or relationships mentioned
+3. Read the current \`.lm-chat/MEMORY.md\` file first (it may already have entries).
+4. Append new entries under a heading with today's date. Use this format:
+   \`\`\`
+   ## YYYY-MM-DD
+   - [fact or preference extracted from conversation]
+   - [another fact]
+   \`\`\`
+5. Do NOT duplicate information already in MEMORY.md.
+6. Do NOT store anything sensitive (passwords, tokens, secrets).
+7. Confirm to the user what you saved.
+`;
+        fs.writeFileSync(path.join(root, 'SKILLS.md'), defaultSkills, 'utf-8');
     }
 
     public resolveWebviewView(
@@ -627,20 +679,29 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 } catch { /* ignore read errors */ }
             }
 
-            // Skills folder hint
-            const skillsDir = path.join(wsPath, '.lm-chat', 'skills');
-            if (fs.existsSync(skillsDir)) {
+            // SKILLS.md — inject skill definitions so the model knows available slash commands
+            const skillsFile = path.join(wsPath, '.lm-chat', 'SKILLS.md');
+            if (fs.existsSync(skillsFile)) {
                 try {
-                    const skillFiles = fs.readdirSync(skillsDir)
-                        .filter(f => f.endsWith('.md') || f.endsWith('.json'))
-                        .sort();
-                    if (skillFiles.length > 0) {
-                        const skillList = skillFiles.slice(0, 20).map(f => `  .lm-chat/skills/${f}`).join('\n');
-                        prompt += `\n\nAvailable skills:\n${skillList}\nYou can read any skill file using read_file with the exact path shown. Skills define reusable instructions or workflows you can follow when the user asks.`;
+                    const skillsContent = fs.readFileSync(skillsFile, 'utf-8').trim();
+                    if (skillsContent) {
+                        prompt += `\n\n=== SKILLS (.lm-chat/SKILLS.md) ===\n${skillsContent}\n=== END SKILLS ===\nWhen the user types a slash command (e.g. /remember), follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
                     }
                 } catch { /* ignore read errors */ }
             }
-            prompt += `\n\nThe .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/ and skills are in .lm-chat/skills/. Use these paths for any file operations related to conversations or skills.`;
+
+            // MEMORY.md — inject saved memories so the model has cross-session context
+            const memoryFile = path.join(wsPath, '.lm-chat', 'MEMORY.md');
+            if (fs.existsSync(memoryFile)) {
+                try {
+                    const memoryContent = fs.readFileSync(memoryFile, 'utf-8').trim();
+                    if (memoryContent) {
+                        prompt += `\n\n=== MEMORY (.lm-chat/MEMORY.md) ===\n${memoryContent}\n=== END MEMORY ===\nThese are facts saved from previous conversations. Use them as context but verify if unsure — they may be outdated.`;
+                    }
+                } catch { /* ignore read errors */ }
+            }
+
+            prompt += `\n\nThe .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/, skills are defined in .lm-chat/SKILLS.md, and cross-session memory is in .lm-chat/MEMORY.md.`;
         }
         prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
         return prompt;
