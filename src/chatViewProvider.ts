@@ -128,6 +128,7 @@ Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all exist
    \`\`\`
 Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
 When writing identifiers (table names, column names, view names, variable names, function names, etc.), copy them EXACTLY as they appeared in the conversation — character for character. NEVER use placeholders like "table_name", "the view", "mentioned table", etc. If a table was called sales_summary, write sales_summary. If you cannot recall the exact name, re-read the conversation above.
+Ensure no visual formatting markers (highlighting, markdown artifacts, backticks, bold markers) end up in the raw text written to MEMORY.md — write plain text only.
 
 **Step 4 — Verify:**
 After write_file executes, call \`<read_file path=".lm-chat/MEMORY.md"/>\` one more time and check that everything was saved correctly — especially that all identifiers are present and not blank or replaced with placeholders. If anything is missing, call write_file again with the corrected content.
@@ -775,9 +776,12 @@ Note: /recall and /forget are handled automatically by the extension — they do
         // Strip markdown code blocks (fenced and inline) before checking for tool tags.
         // This prevents the parser from acting on tag examples the model quotes in its
         // explanatory text (e.g. when asked to list the rules it follows).
+        const toolTagNames = 'read_file|write_file|patch_file|list_dir|search_files|delete_file|create_dir|rename_file|run_bash|mcp_call';
         const codeStripped = response
-            .replace(/```[\s\S]*?```/g, '')   // fenced code blocks
-            .replace(/`[^`\n]+`/g, '');       // inline code spans
+            .replace(/```[\s\S]*?```/g, (m) =>                       // fenced code blocks
+                new RegExp(`<(?:${toolTagNames})\\b`).test(m) ? m : '')
+            .replace(/`([^`\n]+)`/g, (_m, inner) =>                  // inline code spans
+                new RegExp(`<(?:${toolTagNames})\\b`).test(inner) ? inner : '');
 
         // Unwrap native <tool_call> wrappers that local models sometimes produce
         // around our XML tags (e.g. <tool_call><read_file path="..."/></tool_call>).

@@ -24179,6 +24179,7 @@ Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all exist
    \`\`\`
 Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
 When writing identifiers (table names, column names, view names, variable names, function names, etc.), copy them EXACTLY as they appeared in the conversation \u2014 character for character. NEVER use placeholders like "table_name", "the view", "mentioned table", etc. If a table was called sales_summary, write sales_summary. If you cannot recall the exact name, re-read the conversation above.
+Ensure no visual formatting markers (highlighting, markdown artifacts, backticks, bold markers) end up in the raw text written to MEMORY.md \u2014 write plain text only.
 
 **Step 4 \u2014 Verify:**
 After write_file executes, call \`<read_file path=".lm-chat/MEMORY.md"/>\` one more time and check that everything was saved correctly \u2014 especially that all identifiers are present and not blank or replaced with placeholders. If anything is missing, call write_file again with the corrected content.
@@ -24798,7 +24799,14 @@ The .lm-chat/ directory is your workspace data folder containing SKILLS.md (skil
     if (!this.webviewView) {
       return;
     }
-    const codeStripped = response.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]+`/g, "");
+    const toolTagNames = "read_file|write_file|patch_file|list_dir|search_files|delete_file|create_dir|rename_file|run_bash|mcp_call";
+    const codeStripped = response.replace(/```[\s\S]*?```/g, (m) => (
+      // fenced code blocks
+      new RegExp(`<(?:${toolTagNames})\\b`).test(m) ? m : ""
+    )).replace(/`([^`\n]+)`/g, (_m, inner) => (
+      // inline code spans
+      new RegExp(`<(?:${toolTagNames})\\b`).test(inner) ? inner : ""
+    ));
     let stripped = codeStripped.replace(/<\|?tool_call\|?[^>]*>([\s\S]*?)<\|?\/?tool_call\|?>/g, "$1");
     stripped = translateNativeToolCalls(stripped);
     const hasToolTag = stripped.includes("<write_file") && stripped.includes("</write_file>") || stripped.includes("<run_bash>") && stripped.includes("</run_bash>") || stripped.includes("<patch_file") && stripped.includes("</patch_file>") || stripped.includes("<mcp_call") && stripped.includes("</mcp_call>") || stripped.includes("<read_file") || stripped.includes("<list_dir") || stripped.includes("<search_files") || stripped.includes("<delete_file") || stripped.includes("<create_dir") || stripped.includes("<rename_file");
