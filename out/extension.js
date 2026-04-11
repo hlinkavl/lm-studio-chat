@@ -24139,59 +24139,8 @@ Slash-command skills you can invoke. When the user types a command listed here, 
 
 ---
 
-## /save
-
-**Purpose:** Extract lessons learned from the current conversation and save them to memory so the model gets smarter over time.
-
-**When invoked:** The user types \`/save\` (with or without additional context).
-
-**Workflow (follow this exact sequence \u2014 each step requires a real tool call):**
-
-**Step 1 \u2014 Read existing memory:**
-Call \`<read_file path=".lm-chat/MEMORY.md"/>\` and WAIT for the result before continuing. You need the current content to avoid duplicates and to merge new entries with existing ones.
-
-**Step 2 \u2014 Review the conversation and identify entries:**
-After you have the file content, review the conversation and collect entries in ALL of these categories:
-   **a) Key information & discoveries:**
-   - Names of tables, views, columns, schemas, databases mentioned or worked with
-   - Names of functions, variables, classes, files, endpoints, APIs
-   - Connection strings, server names, port numbers (NOT passwords/tokens)
-   - Any concrete facts learned about the project, its data, or its structure
-   **b) Failed attempts & wrong approaches:**
-   - Tool calls that failed and WHY (wrong path, bad syntax, missing arg, etc.)
-   - Approaches that didn't work and what worked instead
-   - Wrong assumptions that led to wasted turns
-   **c) Fixes & workarounds discovered:**
-   - What finally solved the problem and the exact steps
-   - Non-obvious solutions that took multiple tries to find
-   - Edge cases or gotchas encountered
-   **d) User preferences & corrections:**
-   - How the user wants things done (style, approach, workflow)
-   - Corrections the user made ("no, do it this way")
-
-**Step 3 \u2014 Write the updated file:**
-Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all existing entries from Step 1 PLUS the new entries from Step 2. Append new entries under a date heading:
-   \`\`\`
-   ## YYYY-MM-DD
-   - [INFO] Database has tables: orders, customers, products
-   - [INFO] View sales_summary joins orders + customers
-   - [FAIL] Tried X but it failed because Y \u2014 use Z instead
-   - [FIX] When encountering A, the solution is B
-   - [PREF] User prefers X over Y
-   \`\`\`
-Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
-When writing identifiers (table names, column names, view names, variable names, function names, etc.), copy them EXACTLY as they appeared in the conversation \u2014 character for character. NEVER use placeholders like "table_name", "the view", "mentioned table", etc. If a table was called sales_summary, write sales_summary. If you cannot recall the exact name, re-read the conversation above.
-Ensure no visual formatting markers (highlighting, markdown artifacts, backticks, bold markers) end up in the raw text written to MEMORY.md \u2014 write plain text only.
-
-**Step 4 \u2014 Verify:**
-After write_file executes, call \`<read_file path=".lm-chat/MEMORY.md"/>\` one more time and check that everything was saved correctly \u2014 especially that all identifiers are present and not blank or replaced with placeholders. If anything is missing, call write_file again with the corrected content.
-
-**Step 5 \u2014 Confirm:**
-Tell the user what you saved, grouped by category.
-
-**CRITICAL:** This skill is NOT complete until you have called BOTH \`<read_file>\` AND \`<write_file>\`. If you only list insights without writing them, the memory is empty and the skill has failed. You MUST make the tool calls.
-
-Note: /recall and /forget are handled automatically by the extension \u2014 they do not need skill definitions here.
+Note: /save, /recall, and /forget are handled automatically by the extension \u2014 they do not need skill definitions here.
+You can add custom slash commands below.
 `;
     fs3.writeFileSync(path4.join(root, "SKILLS.md"), defaultSkills, "utf-8");
   }
@@ -24656,7 +24605,7 @@ IMPORTANT: Every path shown in the tree above exists. NEVER say a file or direct
 === SKILLS (.lm-chat/SKILLS.md) ===
 ${skillsContent}
 === END SKILLS ===
-Built-in skills: /save (model-driven \u2014 save lessons to memory), /recall and /forget (handled by the extension automatically). When the user types /save or any custom slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
+Built-in skills: /save, /recall, and /forget are handled automatically by the extension. When the user types /save, the extension pre-reads MEMORY.md and injects workflow instructions \u2014 you MUST call write_file to complete the save. For any custom slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
           }
         } catch {
         }
@@ -24715,6 +24664,61 @@ The .lm-chat/ directory is your workspace data folder containing SKILLS.md (skil
     }
     return false;
   }
+  /**
+   * For /save, pre-read MEMORY.md and inject content + workflow instructions
+   * directly into the user message. This prevents the model from skipping
+   * the read step or forgetting to call write_file.
+   */
+  buildSavePrompt(userText) {
+    const wsFolder = vscode4.workspace.workspaceFolders?.[0];
+    if (!wsFolder) {
+      return null;
+    }
+    const memoryPath = path4.join(wsFolder.uri.fsPath, ".lm-chat", "MEMORY.md");
+    let existingMemory = "";
+    try {
+      existingMemory = fs3.existsSync(memoryPath) ? fs3.readFileSync(memoryPath, "utf-8").trim() : "";
+    } catch {
+    }
+    const extra = userText.replace(/^\/save\s*/i, "").trim();
+    return `[SKILL: /save \u2014 Save lessons to memory]
+
+CURRENT MEMORY CONTENT (already read for you \u2014 do NOT call read_file for this):
+${existingMemory ? "```\n" + existingMemory + "\n```" : "(empty \u2014 no entries yet)"}
+${extra ? "\nUser note: " + extra + "\n" : ""}
+YOUR TASK \u2014 follow these steps exactly:
+
+1. Review the conversation above and collect entries in ALL of these categories:
+   a) Key information & discoveries:
+      - Names of tables, views, columns, schemas, databases mentioned or worked with
+      - Names of functions, variables, classes, files, endpoints, APIs
+      - Connection strings, server names, port numbers (NOT passwords/tokens)
+      - Any concrete facts learned about the project, its data, or its structure
+   b) Failed attempts & wrong approaches:
+      - Tool calls that failed and WHY (wrong path, bad syntax, missing arg, etc.)
+      - Approaches that didn't work and what worked instead
+   c) Fixes & workarounds discovered:
+      - What finally solved the problem and the exact steps
+      - Non-obvious solutions that took multiple tries to find
+   d) User preferences & corrections:
+      - How the user wants things done (style, approach, workflow)
+      - Corrections the user made ("no, do it this way")
+
+2. NOW CALL write_file \u2014 this is MANDATORY, the skill fails without it:
+   Call <write_file path=".lm-chat/MEMORY.md"> with the FULL content: all existing entries shown above PLUS your new entries appended under a date heading:
+   ## YYYY-MM-DD
+   - [INFO] Database has tables: orders, customers, products
+   - [FAIL] Tried X but it failed because Y \u2014 use Z instead
+   - [FIX] When encountering A, the solution is B
+   - [PREF] User prefers X over Y
+   Do NOT duplicate entries already present. Do NOT store anything sensitive.
+   Copy identifiers EXACTLY as they appeared \u2014 never use placeholders.
+   Write plain text only \u2014 no backticks, bold markers, or markdown formatting in entries.
+
+3. After write_file executes, confirm to the user what you saved, grouped by category.
+
+CRITICAL: You MUST call <write_file path=".lm-chat/MEMORY.md"> with the full updated content. If you only list insights without writing them, the memory file stays empty and the skill has FAILED. Do NOT summarize what you would save \u2014 actually save it.`;
+  }
   sendSkillResponse(text) {
     if (!this.webviewView) {
       return;
@@ -24750,6 +24754,12 @@ The .lm-chat/ directory is your workspace data folder containing SKILLS.md (skil
       const handled = this.handleBuiltinSkill(slashMatch[1]);
       if (handled) {
         return;
+      }
+      if (slashMatch[1] === "/save") {
+        const savePrompt = this.buildSavePrompt(text);
+        if (savePrompt) {
+          messages[messages.length - 1] = { role: "user", content: savePrompt };
+        }
       }
     }
     let fullResponse = "";

@@ -81,66 +81,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         // Blank memory file
         fs.writeFileSync(path.join(root, 'MEMORY.md'), '', 'utf-8');
 
-        // Default skills file with /save
+        // Default skills file (built-in skills are hardcoded, this is for custom skills)
         const defaultSkills = `# Skills
 
 Slash-command skills you can invoke. When the user types a command listed here, follow the instructions exactly.
 
 ---
 
-## /save
-
-**Purpose:** Extract lessons learned from the current conversation and save them to memory so the model gets smarter over time.
-
-**When invoked:** The user types \`/save\` (with or without additional context).
-
-**Workflow (follow this exact sequence — each step requires a real tool call):**
-
-**Step 1 — Read existing memory:**
-Call \`<read_file path=".lm-chat/MEMORY.md"/>\` and WAIT for the result before continuing. You need the current content to avoid duplicates and to merge new entries with existing ones.
-
-**Step 2 — Review the conversation and identify entries:**
-After you have the file content, review the conversation and collect entries in ALL of these categories:
-   **a) Key information & discoveries:**
-   - Names of tables, views, columns, schemas, databases mentioned or worked with
-   - Names of functions, variables, classes, files, endpoints, APIs
-   - Connection strings, server names, port numbers (NOT passwords/tokens)
-   - Any concrete facts learned about the project, its data, or its structure
-   **b) Failed attempts & wrong approaches:**
-   - Tool calls that failed and WHY (wrong path, bad syntax, missing arg, etc.)
-   - Approaches that didn't work and what worked instead
-   - Wrong assumptions that led to wasted turns
-   **c) Fixes & workarounds discovered:**
-   - What finally solved the problem and the exact steps
-   - Non-obvious solutions that took multiple tries to find
-   - Edge cases or gotchas encountered
-   **d) User preferences & corrections:**
-   - How the user wants things done (style, approach, workflow)
-   - Corrections the user made ("no, do it this way")
-
-**Step 3 — Write the updated file:**
-Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all existing entries from Step 1 PLUS the new entries from Step 2. Append new entries under a date heading:
-   \`\`\`
-   ## YYYY-MM-DD
-   - [INFO] Database has tables: orders, customers, products
-   - [INFO] View sales_summary joins orders + customers
-   - [FAIL] Tried X but it failed because Y — use Z instead
-   - [FIX] When encountering A, the solution is B
-   - [PREF] User prefers X over Y
-   \`\`\`
-Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
-When writing identifiers (table names, column names, view names, variable names, function names, etc.), copy them EXACTLY as they appeared in the conversation — character for character. NEVER use placeholders like "table_name", "the view", "mentioned table", etc. If a table was called sales_summary, write sales_summary. If you cannot recall the exact name, re-read the conversation above.
-Ensure no visual formatting markers (highlighting, markdown artifacts, backticks, bold markers) end up in the raw text written to MEMORY.md — write plain text only.
-
-**Step 4 — Verify:**
-After write_file executes, call \`<read_file path=".lm-chat/MEMORY.md"/>\` one more time and check that everything was saved correctly — especially that all identifiers are present and not blank or replaced with placeholders. If anything is missing, call write_file again with the corrected content.
-
-**Step 5 — Confirm:**
-Tell the user what you saved, grouped by category.
-
-**CRITICAL:** This skill is NOT complete until you have called BOTH \`<read_file>\` AND \`<write_file>\`. If you only list insights without writing them, the memory is empty and the skill has failed. You MUST make the tool calls.
-
-Note: /recall and /forget are handled automatically by the extension — they do not need skill definitions here.
+Note: /save, /recall, and /forget are handled automatically by the extension — they do not need skill definitions here.
+You can add custom slash commands below.
 `;
         fs.writeFileSync(path.join(root, 'SKILLS.md'), defaultSkills, 'utf-8');
     }
@@ -625,7 +574,7 @@ Note: /recall and /forget are handled automatically by the extension — they do
                 try {
                     const skillsContent = fs.readFileSync(skillsFile, 'utf-8').trim();
                     if (skillsContent) {
-                        prompt += `\n\n=== SKILLS (.lm-chat/SKILLS.md) ===\n${skillsContent}\n=== END SKILLS ===\nBuilt-in skills: /save (model-driven — save lessons to memory), /recall and /forget (handled by the extension automatically). When the user types /save or any custom slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
+                        prompt += `\n\n=== SKILLS (.lm-chat/SKILLS.md) ===\n${skillsContent}\n=== END SKILLS ===\nBuilt-in skills: /save, /recall, and /forget are handled automatically by the extension. When the user types /save, the extension pre-reads MEMORY.md and injects workflow instructions — you MUST call write_file to complete the save. For any custom slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
                     }
                 } catch { /* ignore read errors */ }
             }
@@ -684,6 +633,65 @@ Note: /recall and /forget are handled automatically by the extension — they do
         return false; // not a hardcoded skill — let the model handle it
     }
 
+    /**
+     * For /save, pre-read MEMORY.md and inject content + workflow instructions
+     * directly into the user message. This prevents the model from skipping
+     * the read step or forgetting to call write_file.
+     */
+    private buildSavePrompt(userText: string): string | null {
+        const wsFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!wsFolder) { return null; }
+
+        const memoryPath = path.join(wsFolder.uri.fsPath, '.lm-chat', 'MEMORY.md');
+        let existingMemory = '';
+        try {
+            existingMemory = fs.existsSync(memoryPath)
+                ? fs.readFileSync(memoryPath, 'utf-8').trim()
+                : '';
+        } catch { /* empty */ }
+
+        // Extra context the user may have typed after /save
+        const extra = userText.replace(/^\/save\s*/i, '').trim();
+
+        return `[SKILL: /save — Save lessons to memory]
+
+CURRENT MEMORY CONTENT (already read for you — do NOT call read_file for this):
+${existingMemory ? '```\n' + existingMemory + '\n```' : '(empty — no entries yet)'}
+${extra ? '\nUser note: ' + extra + '\n' : ''}
+YOUR TASK — follow these steps exactly:
+
+1. Review the conversation above and collect entries in ALL of these categories:
+   a) Key information & discoveries:
+      - Names of tables, views, columns, schemas, databases mentioned or worked with
+      - Names of functions, variables, classes, files, endpoints, APIs
+      - Connection strings, server names, port numbers (NOT passwords/tokens)
+      - Any concrete facts learned about the project, its data, or its structure
+   b) Failed attempts & wrong approaches:
+      - Tool calls that failed and WHY (wrong path, bad syntax, missing arg, etc.)
+      - Approaches that didn't work and what worked instead
+   c) Fixes & workarounds discovered:
+      - What finally solved the problem and the exact steps
+      - Non-obvious solutions that took multiple tries to find
+   d) User preferences & corrections:
+      - How the user wants things done (style, approach, workflow)
+      - Corrections the user made ("no, do it this way")
+
+2. NOW CALL write_file — this is MANDATORY, the skill fails without it:
+   Call <write_file path=".lm-chat/MEMORY.md"> with the FULL content: all existing entries shown above PLUS your new entries appended under a date heading:
+   ## YYYY-MM-DD
+   - [INFO] Database has tables: orders, customers, products
+   - [FAIL] Tried X but it failed because Y — use Z instead
+   - [FIX] When encountering A, the solution is B
+   - [PREF] User prefers X over Y
+   Do NOT duplicate entries already present. Do NOT store anything sensitive.
+   Copy identifiers EXACTLY as they appeared — never use placeholders.
+   Write plain text only — no backticks, bold markers, or markdown formatting in entries.
+
+3. After write_file executes, confirm to the user what you saved, grouped by category.
+
+CRITICAL: You MUST call <write_file path=".lm-chat/MEMORY.md"> with the full updated content. If you only list insights without writing them, the memory file stays empty and the skill has FAILED. Do NOT summarize what you would save — actually save it.`;
+    }
+
     private sendSkillResponse(text: string): void {
         if (!this.webviewView) { return; }
         this.conversationHistory.push({ role: 'assistant', content: text });
@@ -725,6 +733,15 @@ Note: /recall and /forget are handled automatically by the extension — they do
             // Hardcoded skills — handle in code, skip model entirely
             const handled = this.handleBuiltinSkill(slashMatch[1]);
             if (handled) { return; }
+
+            // /save — inject pre-read memory + workflow instructions into the model message
+            if (slashMatch[1] === '/save') {
+                const savePrompt = this.buildSavePrompt(text);
+                if (savePrompt) {
+                    // Replace the raw "/save" message with the enriched prompt for the model
+                    messages[messages.length - 1] = { role: 'user', content: savePrompt };
+                }
+            }
         }
 
         // Stream
