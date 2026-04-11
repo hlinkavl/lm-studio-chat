@@ -145,18 +145,6 @@
         .btn-permission.perm-ask  { color: var(--ai);   border-color: rgba(156,220,254,0.35); }
         .btn-permission.perm-edit { color: var(--user); border-color: rgba(226,169,106,0.35); }
 
-        .btn-export {
-            color: var(--ai);
-            border-color: rgba(156,220,254,0.35);
-            display: none;
-        }
-        .btn-export:hover {
-            color: #b8e2ff;
-            border-color: rgba(156,220,254,0.55);
-            background: rgba(156,220,254,0.06);
-        }
-        .btn-export.visible { display: inline-flex; }
-
         .btn-new {
             color: var(--prompt);
             border-color: rgba(78,201,176,0.5);
@@ -541,6 +529,26 @@
         .skill-card-status {
             font-size: 10px; color: var(--muted); flex-shrink: 0;
         }
+        /* /recall — blue */
+        .skill-card.skill-recall {
+            border-color: rgba(156,220,254,0.35);
+        }
+        .skill-card.skill-recall .skill-card-header {
+            background: rgba(156,220,254,0.06);
+        }
+        .skill-card.skill-recall .skill-card-label {
+            color: var(--ai);
+        }
+        /* /forget — red */
+        .skill-card.skill-forget {
+            border-color: rgba(244,135,113,0.35);
+        }
+        .skill-card.skill-forget .skill-card-header {
+            background: rgba(244,135,113,0.06);
+        }
+        .skill-card.skill-forget .skill-card-label {
+            color: var(--error);
+        }
 
         /* ── Search tool card ── */
         .search-card {
@@ -738,14 +746,6 @@
 
                 <div class="topbar-divider"></div>
 
-                <button class="btn btn-export" id="exportBtn" title="Export conversation to file">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
-                         stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0">
-                        <path d="M8 2v8M4 7l4 4 4-4"/>
-                        <path d="M2 12v2h12v-2"/>
-                    </svg>
-                    save
-                </button>
                 <button class="btn btn-new" id="newChatBtn" title="New conversation">
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
                          stroke-linecap="round" style="width:11px;height:11px">
@@ -917,7 +917,6 @@
     const shellToggleBtn  = document.getElementById('shellToggleBtn');
     const shellPermsArea  = document.getElementById('shellPermsArea');
     let shellPermSaveTimer = null;
-    const exportBtn       = document.getElementById('exportBtn');
     const tokenLabel      = document.getElementById('tokenLabel');
     const tokenBar        = document.getElementById('tokenBar');
     const tokenBarFill    = document.getElementById('tokenBarFill');
@@ -1037,7 +1036,7 @@
         s = s.replace(/^(?:---|___|\*\*\*)\s*$/gm, '<hr>');
         s = s.replace(/^&gt;\s?(.+)/gm, '<blockquote>$1</blockquote>');
         s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${escapeHtml(c)}</code>`);
-        // Color slash commands (e.g. /remember) — skip anything inside <code> tags
+        // Color slash commands (e.g. /save) — skip anything inside <code> tags
         s = s.replace(/(<code>[\s\S]*?<\/code>)|((?:^|\s))(\/[a-zA-Z][\w-]*)(?=[\s.,;:!?)}\]<]|$)/gm,
             (match, codeBlock, prefix, cmd) => codeBlock ? match : `${prefix}<span class="slash-cmd">${cmd}</span>`);
         s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -1454,7 +1453,6 @@
         const text = inputEl.value.trim();
         if (!text || isStreaming) return;
         hideWelcome();
-        exportBtn.classList.add('visible');
         addMsg('user', text);
         vscode.postMessage({ type: 'sendMessage', text });
         inputEl.value = '';
@@ -1477,7 +1475,6 @@
     urlChip.addEventListener('click',       () => vscode.postMessage({ type: 'changeEndpoint' }));
     modelChip.addEventListener('click',     () => vscode.postMessage({ type: 'selectModel' }));
     newChatBtn.addEventListener('click',    () => vscode.postMessage({ type: 'newChat' }));
-    exportBtn.addEventListener('click',     () => vscode.postMessage({ type: 'exportConversation' }));
     tokenLabel.addEventListener('click',    () => vscode.postMessage({ type: 'setContextLimit' }));
     function openShell() {
         closeSysPrompt();
@@ -1680,7 +1677,6 @@
                     )) return;
                     addMsg(item.role, item.content);
                 });
-                exportBtn.classList.add('visible');
                 break;
 
             case 'streamStart': startStream(); break;
@@ -1817,15 +1813,21 @@
 
             case 'skillActivation': {
                 hideWelcome();
+                const skillThemes = {
+                    '/recall': { cls: 'skill-recall', icon: '📖' },
+                    '/forget': { cls: 'skill-forget', icon: '🗑️' },
+                };
+                const theme = skillThemes[msg.skill] || { cls: '', icon: '⚡' };
+
                 const card = document.createElement('div');
-                card.className = 'skill-card';
+                card.className = 'skill-card' + (theme.cls ? ' ' + theme.cls : '');
 
                 const header = document.createElement('div');
                 header.className = 'skill-card-header';
 
                 const icon = document.createElement('span');
                 icon.className = 'skill-card-icon';
-                icon.textContent = '⚡';
+                icon.textContent = theme.icon;
 
                 const label = document.createElement('span');
                 label.className = 'skill-card-label';
@@ -2028,7 +2030,6 @@
                 messagesEl.appendChild(welcomeEl);
                 isStreaming = false; currentBodyEl = null; currentRawText = '';
                 typingEl.classList.remove('active');
-                exportBtn.classList.remove('visible');
                 resetTokenBar();
                 endStream();
                 break;

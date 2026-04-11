@@ -24131,7 +24131,7 @@ var ChatViewProvider = class {
     if (fs3.existsSync(root)) {
       return;
     }
-    fs3.mkdirSync(path4.join(root, "chat-history"), { recursive: true });
+    fs3.mkdirSync(root, { recursive: true });
     fs3.writeFileSync(path4.join(root, "MEMORY.md"), "", "utf-8");
     const defaultSkills = `# Skills
 
@@ -24139,31 +24139,75 @@ Slash-command skills you can invoke. When the user types a command listed here, 
 
 ---
 
-## /remember
+## /save
 
-**Purpose:** Extract important information from the current conversation and save it to memory.
+**Purpose:** Extract lessons learned from the current conversation and save them to memory so the model gets smarter over time.
 
-**When invoked:** The user types \`/remember\` (with or without additional context).
+**When invoked:** The user types \`/save\` (with or without additional context).
 
 **Instructions:**
 1. Review the entire conversation so far.
-2. Identify key facts worth remembering for future sessions:
-   - User preferences, decisions, or corrections
-   - Project context, goals, or constraints
-   - Technical details that aren't obvious from the code alone
-   - Names, roles, or relationships mentioned
+2. Identify and prioritize these categories (most important first):
+   **a) Failed attempts & wrong approaches:**
+   - Tool calls that failed and WHY they failed (wrong path, bad syntax, missing arg, etc.)
+   - Approaches that didn't work and what worked instead
+   - Wrong assumptions that led to wasted turns
+   - Incorrect tool usage patterns (e.g. used write_file when patch_file was needed)
+   **b) Fixes & workarounds discovered:**
+   - What finally solved the problem and the exact steps
+   - Non-obvious solutions that took multiple tries to find
+   - Edge cases or gotchas encountered
+   **c) User preferences & corrections:**
+   - How the user wants things done (style, approach, workflow)
+   - Corrections the user made ("no, do it this way")
+   **d) Project context:**
+   - Technical details not obvious from the code
+   - Architecture decisions and their reasoning
 3. Read the current \`.lm-chat/MEMORY.md\` file using \`<read_file path=".lm-chat/MEMORY.md"/>\` (it may already have entries).
 4. Write the updated file using \`<write_file>\` with the full content (existing + new entries). Append new entries under a heading with today's date:
    \`\`\`
    ## YYYY-MM-DD
-   - [fact or preference extracted from conversation]
-   - [another fact]
+   - [FAIL] Tried X but it failed because Y \u2014 use Z instead
+   - [FIX] When encountering A, the solution is B
+   - [PREF] User prefers X over Y
+   - [CTX] Project detail worth remembering
    \`\`\`
 5. Do NOT duplicate information already in MEMORY.md.
 6. Do NOT store anything sensitive (passwords, tokens, secrets).
-7. Confirm to the user what you saved.
+7. Confirm to the user what you saved, grouped by category.
 
 **IMPORTANT:** Always use the built-in \`<read_file>\` and \`<write_file>\` tools to read and update MEMORY.md. Do NOT use MCP tools or shell commands for this.
+
+---
+
+## /recall
+
+**Purpose:** Load saved memories so the model has full context from previous sessions.
+
+**When invoked:** The user types \`/recall\`.
+
+**Instructions:**
+1. Read the \`.lm-chat/MEMORY.md\` file using \`<read_file path=".lm-chat/MEMORY.md"/>\`.
+2. If the file is empty or has no entries, say: "Memory is empty \u2014 nothing to recall."
+3. If there are entries, internalize them silently and respond with a short confirmation like: "Up to date." or "Recalled N entries."
+4. Do NOT list or summarize the entries back to the user unless they explicitly ask.
+
+**IMPORTANT:** Always use the built-in \`<read_file>\` tool. Do NOT use MCP tools or shell commands.
+
+---
+
+## /forget
+
+**Purpose:** Clear all saved memories, giving the model a fresh start.
+
+**When invoked:** The user types \`/forget\`.
+
+**Instructions:**
+1. Write an empty file using \`<write_file path=".lm-chat/MEMORY.md">\\n</write_file>\` (this clears all content).
+2. Confirm to the user: "Memory cleared."
+3. Do NOT ask for confirmation before clearing \u2014 the user already chose to run /forget.
+
+**IMPORTANT:** Always use the built-in \`<write_file>\` tool. Do NOT use MCP tools or shell commands.
 `;
     fs3.writeFileSync(path4.join(root, "SKILLS.md"), defaultSkills, "utf-8");
   }
@@ -24440,9 +24484,6 @@ Error: ${msg}` });
             skipped: true
           });
           break;
-        case "exportConversation":
-          await this.exportConversation();
-          break;
         case "denyTool": {
           const tool = this.pendingTools.get(message.id);
           if (!tool) {
@@ -24530,66 +24571,6 @@ Do NOT attempt this action again in this session. Acknowledge the restriction an
     this.saveHistory();
     this.webviewView?.webview.postMessage({ type: "reset" });
     vscode4.window.showInformationMessage("LM Chat: Conversation cleared");
-  }
-  async exportConversation() {
-    if (this.conversationHistory.length === 0) {
-      vscode4.window.showWarningMessage("No conversation to export.");
-      return;
-    }
-    const wsFolder = vscode4.workspace.workspaceFolders?.[0];
-    if (!wsFolder) {
-      vscode4.window.showWarningMessage("No workspace folder open \u2014 cannot export.");
-      return;
-    }
-    const now = /* @__PURE__ */ new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-    const filename = `chat-${timestamp}.md`;
-    const exportDir = path4.join(wsFolder.uri.fsPath, ".lm-chat", "chat-history");
-    fs3.mkdirSync(exportDir, { recursive: true });
-    const filePath = path4.join(exportDir, filename);
-    const content = this.formatConversation();
-    fs3.writeFileSync(filePath, content, "utf-8");
-    const doc = await vscode4.workspace.openTextDocument(vscode4.Uri.file(filePath));
-    await vscode4.window.showTextDocument(doc, { preview: true });
-    vscode4.window.showInformationMessage(`Conversation saved to .lm-chat/chat-history/${filename}`);
-  }
-  formatConversation() {
-    const lines = [];
-    const now = (/* @__PURE__ */ new Date()).toLocaleString();
-    lines.push("# LM Chat Export");
-    lines.push("");
-    lines.push(`**Exported:** ${now}`);
-    if (this.currentModel) {
-      lines.push(`**Model:** ${this.currentModel}`);
-    }
-    const wsFolder = vscode4.workspace.workspaceFolders?.[0];
-    if (wsFolder) {
-      lines.push(`**Workspace:** ${wsFolder.uri.fsPath}`);
-    }
-    lines.push("");
-    lines.push("---");
-    lines.push("");
-    for (const msg of this.conversationHistory) {
-      if (msg.role === "system") {
-        continue;
-      }
-      if (msg.role === "user" && (msg.content.startsWith("[Tool result:") || msg.content.startsWith("[SYSTEM \u2014"))) {
-        continue;
-      }
-      if (msg.role === "user") {
-        lines.push("## You");
-        lines.push("");
-        lines.push(msg.content);
-        lines.push("");
-      } else {
-        lines.push("## Assistant");
-        lines.push("");
-        lines.push(stripToolTagsForExport(msg.content));
-        lines.push("");
-      }
-    }
-    return lines.join("\n");
   }
   async refreshHealthCheck() {
     await this.handleHealthCheck();
@@ -24681,21 +24662,6 @@ File tree (use these exact paths in tool calls):
 ${tree}
 
 IMPORTANT: Every path shown in the tree above exists. NEVER say a file or directory does not exist \u2014 use <read_file path="..."/> to verify a file and <list_dir path="..."/> to verify a directory. Always read a file before editing it.`;
-      const historyDir = path4.join(wsPath, ".lm-chat", "chat-history");
-      if (fs3.existsSync(historyDir)) {
-        try {
-          const historyFiles = fs3.readdirSync(historyDir).filter((f) => f.endsWith(".md") || f.endsWith(".txt")).sort().reverse();
-          if (historyFiles.length > 0) {
-            const fileList = historyFiles.slice(0, 10).map((f) => `  .lm-chat/chat-history/${f}`).join("\n");
-            prompt += `
-
-Past conversation exports (newest first):
-${fileList}
-You can read any of the files listed above using read_file with the exact path shown (e.g. <read_file path="${".lm-chat/chat-history/" + historyFiles[0]}"/>). Do this when the user asks about previous conversations.`;
-          }
-        } catch {
-        }
-      }
       const skillsFile = path4.join(wsPath, ".lm-chat", "SKILLS.md");
       if (fs3.existsSync(skillsFile)) {
         try {
@@ -24706,7 +24672,7 @@ You can read any of the files listed above using read_file with the exact path s
 === SKILLS (.lm-chat/SKILLS.md) ===
 ${skillsContent}
 === END SKILLS ===
-When the user types a slash command (e.g. /remember), follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
+Built-in skills: /save (save lessons to memory), /recall (load memory), /forget (clear memory). When the user types a slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
           }
         } catch {
         }
@@ -24728,7 +24694,7 @@ These are facts saved from previous conversations. Use them as context but verif
       }
       prompt += `
 
-The .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/, skills are defined in .lm-chat/SKILLS.md, and cross-session memory is in .lm-chat/MEMORY.md. Always use <read_file> and <write_file> to update these files \u2014 never use MCP tools or shell commands for them.`;
+The .lm-chat/ directory is your workspace data folder containing SKILLS.md (skill definitions) and MEMORY.md (cross-session memory). Always use <read_file> and <write_file> to update these files \u2014 never use MCP tools or shell commands for them.`;
     }
     prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
     return prompt;
@@ -25741,11 +25707,6 @@ function activate(context) {
       }
       const doc = await vscode5.workspace.openTextDocument(vscode5.Uri.file(configPath));
       await vscode5.window.showTextDocument(doc, { preview: false });
-    })
-  );
-  context.subscriptions.push(
-    vscode5.commands.registerCommand("lmChat.exportConversation", async () => {
-      await provider.exportConversation();
     })
   );
   console.log("LM Chat extension activated");
