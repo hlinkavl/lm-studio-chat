@@ -228,7 +228,7 @@
             background: #2d2d2d; color: var(--string);
             padding: 1px 4px; border-radius: 2px;
         }
-        .msg-body .slash-cmd {
+        .slash-cmd {
             color: var(--prompt); font-weight: 600;
         }
         .msg-body pre {
@@ -524,6 +524,23 @@
             display: none;
         }
         .read-card-output.visible { display: block; }
+
+        /* ── Skill activation card ── */
+        .skill-card {
+            margin: 8px 0 4px; border: 1px solid rgba(78,201,176,0.35);
+            border-radius: 4px; overflow: hidden;
+        }
+        .skill-card-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; background: rgba(78,201,176,0.06);
+        }
+        .skill-card-icon { font-size: 13px; flex-shrink: 0; }
+        .skill-card-label {
+            flex: 1; font-size: 11px; color: var(--prompt); font-weight: 600;
+        }
+        .skill-card-status {
+            font-size: 10px; color: var(--muted); flex-shrink: 0;
+        }
 
         /* ── Search tool card ── */
         .search-card {
@@ -1366,7 +1383,15 @@
             prompt.textContent = '❯';
             const text = document.createElement('span');
             text.className = 'msg-text';
-            text.textContent = content;
+            // Color slash commands in user messages
+            const safe = escapeHtml(content);
+            const colored = safe.replace(/(^|\s)(\/[a-zA-Z][\w-]*)(?=[\s.,;:!?)}\]<]|$)/gm,
+                '$1<span class="slash-cmd">$2</span>');
+            if (colored !== safe) {
+                text.innerHTML = colored;
+            } else {
+                text.textContent = content;
+            }
             line.appendChild(prompt);
             line.appendChild(text);
             wrap.appendChild(line);
@@ -1787,6 +1812,36 @@
                 else if (msg.denied)   resolveToolCard(msg.id, 'denied',   null, msg.denyReason);
                 else if (msg.success)  resolveToolCard(msg.id, 'applied', msg.output || null);
                 else                   resolveToolCard(msg.id, 'failed',  msg.output || null);
+                break;
+            }
+
+            case 'skillActivation': {
+                hideWelcome();
+                const card = document.createElement('div');
+                card.className = 'skill-card';
+
+                const header = document.createElement('div');
+                header.className = 'skill-card-header';
+
+                const icon = document.createElement('span');
+                icon.className = 'skill-card-icon';
+                icon.textContent = '⚡';
+
+                const label = document.createElement('span');
+                label.className = 'skill-card-label';
+                label.textContent = msg.skill;
+
+                const status = document.createElement('span');
+                status.className = 'skill-card-status';
+                status.textContent = 'activated';
+
+                header.appendChild(icon);
+                header.appendChild(label);
+                header.appendChild(status);
+                card.appendChild(header);
+
+                messagesEl.appendChild(card);
+                scrollBottom();
                 break;
             }
 

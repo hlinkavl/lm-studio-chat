@@ -24152,8 +24152,8 @@ Slash-command skills you can invoke. When the user types a command listed here, 
    - Project context, goals, or constraints
    - Technical details that aren't obvious from the code alone
    - Names, roles, or relationships mentioned
-3. Read the current \`.lm-chat/MEMORY.md\` file first (it may already have entries).
-4. Append new entries under a heading with today's date. Use this format:
+3. Read the current \`.lm-chat/MEMORY.md\` file using \`<read_file path=".lm-chat/MEMORY.md"/>\` (it may already have entries).
+4. Write the updated file using \`<write_file>\` with the full content (existing + new entries). Append new entries under a heading with today's date:
    \`\`\`
    ## YYYY-MM-DD
    - [fact or preference extracted from conversation]
@@ -24162,6 +24162,8 @@ Slash-command skills you can invoke. When the user types a command listed here, 
 5. Do NOT duplicate information already in MEMORY.md.
 6. Do NOT store anything sensitive (passwords, tokens, secrets).
 7. Confirm to the user what you saved.
+
+**IMPORTANT:** Always use the built-in \`<read_file>\` and \`<write_file>\` tools to read and update MEMORY.md. Do NOT use MCP tools or shell commands for this.
 `;
     fs3.writeFileSync(path4.join(root, "SKILLS.md"), defaultSkills, "utf-8");
   }
@@ -24726,7 +24728,7 @@ These are facts saved from previous conversations. Use them as context but verif
       }
       prompt += `
 
-The .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/, skills are defined in .lm-chat/SKILLS.md, and cross-session memory is in .lm-chat/MEMORY.md.`;
+The .lm-chat/ directory is your workspace data folder. Chat history exports are in .lm-chat/chat-history/, skills are defined in .lm-chat/SKILLS.md, and cross-session memory is in .lm-chat/MEMORY.md. Always use <read_file> and <write_file> to update these files \u2014 never use MCP tools or shell commands for them.`;
     }
     prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
     return prompt;
@@ -24747,6 +24749,13 @@ The .lm-chat/ directory is your workspace data folder. Chat history exports are 
     messages.push({ role: "user", content: text });
     this.conversationHistory.push({ role: "user", content: text });
     this.saveHistory();
+    const slashMatch = text.trim().match(/^(\/[a-zA-Z][\w-]*)/);
+    if (slashMatch) {
+      this.webviewView.webview.postMessage({
+        type: "skillActivation",
+        skill: slashMatch[1]
+      });
+    }
     let fullResponse = "";
     this.webviewView.webview.postMessage({ type: "streamStart" });
     await this.client.streamChat(messages, {
