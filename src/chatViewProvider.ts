@@ -127,55 +127,17 @@ Call \`<write_file path=".lm-chat/MEMORY.md">\` with the FULL content: all exist
    - [CTX] Project detail worth remembering
    \`\`\`
 Do NOT duplicate entries already present. Do NOT store anything sensitive (passwords, tokens, secrets).
+When writing identifiers (table names, column names, view names, variable names, function names, etc.), copy them EXACTLY as they appeared in the conversation — character for character. NEVER use placeholders like "table_name", "the view", "mentioned table", etc. If a table was called sales_summary, write sales_summary. If you cannot recall the exact name, re-read the conversation above.
 
 **Step 4 — Verify:**
-After write_file executes, call \`<read_file path=".lm-chat/MEMORY.md"/>\` one more time and check that everything was saved correctly — especially names of tables, columns, views, variables, and other identifiers. If anything is missing or blank, call write_file again with the corrected content.
+After write_file executes, call \`<read_file path=".lm-chat/MEMORY.md"/>\` one more time and check that everything was saved correctly — especially that all identifiers are present and not blank or replaced with placeholders. If anything is missing, call write_file again with the corrected content.
 
 **Step 5 — Confirm:**
 Tell the user what you saved, grouped by category.
 
 **CRITICAL:** This skill is NOT complete until you have called BOTH \`<read_file>\` AND \`<write_file>\`. If you only list insights without writing them, the memory is empty and the skill has failed. You MUST make the tool calls.
 
----
-
-## /recall
-
-**Purpose:** Load saved memories so the model has full context from previous sessions.
-
-**When invoked:** The user types \`/recall\`.
-
-**Workflow (requires a tool call):**
-
-**Step 1 — Read memory:**
-You MUST call \`<read_file path=".lm-chat/MEMORY.md"/>\` and WAIT for the result. Do NOT skip this step.
-
-**Step 2 — Respond:**
-- If the file is empty or has no entries, say: "Memory is empty — nothing to recall."
-- If there are entries, internalize them silently and respond with a short confirmation like: "Up to date." or "Recalled N entries."
-- Do NOT list or summarize the entries unless the user explicitly asks.
-
-**CRITICAL:** This skill REQUIRES a \`<read_file>\` tool call. If you respond without calling read_file first, you have NOT loaded memory and the skill has failed.
-
----
-
-## /forget
-
-**Purpose:** Clear all saved memories, giving the model a fresh start.
-
-**When invoked:** The user types \`/forget\`.
-
-**Workflow (requires a tool call):**
-
-**Step 1 — Clear the file:**
-You MUST call the following tool call EXACTLY as shown — include it in your response:
-\`<write_file path=".lm-chat/MEMORY.md">
-</write_file>\`
-This overwrites MEMORY.md with empty content. Do NOT skip this step. Do NOT just say "Memory cleared" without making the tool call.
-
-**Step 2 — Confirm:**
-After the write_file tool has executed, say: "Memory cleared."
-
-**CRITICAL:** This skill REQUIRES a \`<write_file>\` tool call. Saying "Memory cleared" without actually calling write_file means the memory is NOT cleared and the skill has failed. You MUST include the tool call in your response.
+Note: /recall and /forget are handled automatically by the extension — they do not need skill definitions here.
 `;
         fs.writeFileSync(path.join(root, 'SKILLS.md'), defaultSkills, 'utf-8');
     }
@@ -660,7 +622,7 @@ After the write_file tool has executed, say: "Memory cleared."
                 try {
                     const skillsContent = fs.readFileSync(skillsFile, 'utf-8').trim();
                     if (skillsContent) {
-                        prompt += `\n\n=== SKILLS (.lm-chat/SKILLS.md) ===\n${skillsContent}\n=== END SKILLS ===\nBuilt-in skills: /save (save lessons to memory), /recall (load memory), /forget (clear memory). When the user types a slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
+                        prompt += `\n\n=== SKILLS (.lm-chat/SKILLS.md) ===\n${skillsContent}\n=== END SKILLS ===\nBuilt-in skills: /save (model-driven — save lessons to memory), /recall and /forget (handled by the extension automatically). When the user types /save or any custom slash command, follow the matching skill instructions above exactly. You can also edit .lm-chat/SKILLS.md to add new skills when asked.`;
                     }
                 } catch { /* ignore read errors */ }
             }
@@ -680,6 +642,52 @@ After the write_file tool has executed, say: "Memory cleared."
         }
         prompt += this.mcpManager.getToolsSystemPromptBlock(this.mcpInstructions, this.mcpPermissions);
         return prompt;
+    }
+
+    // ── Hardcoded built-in skills ──────────────────────────────────────────
+
+    private handleBuiltinSkill(skill: string): boolean {
+        const wsFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!wsFolder) { return false; }
+        const memoryPath = path.join(wsFolder.uri.fsPath, '.lm-chat', 'MEMORY.md');
+
+        if (skill === '/forget') {
+            try {
+                fs.writeFileSync(memoryPath, '', 'utf-8');
+                this.sendSkillResponse('Memory cleared.');
+            } catch {
+                this.sendSkillResponse('Failed to clear memory — file may not exist yet.');
+            }
+            return true;
+        }
+
+        if (skill === '/recall') {
+            try {
+                const content = fs.existsSync(memoryPath)
+                    ? fs.readFileSync(memoryPath, 'utf-8').trim()
+                    : '';
+                if (!content) {
+                    this.sendSkillResponse('Memory is empty — nothing to recall.');
+                } else {
+                    const entries = content.split('\n').filter(l => l.startsWith('- ')).length;
+                    this.sendSkillResponse(`Up to date. Recalled ${entries} entr${entries === 1 ? 'y' : 'ies'}.`);
+                }
+            } catch {
+                this.sendSkillResponse('Failed to read memory.');
+            }
+            return true;
+        }
+
+        return false; // not a hardcoded skill — let the model handle it
+    }
+
+    private sendSkillResponse(text: string): void {
+        if (!this.webviewView) { return; }
+        this.conversationHistory.push({ role: 'assistant', content: text });
+        this.saveHistory();
+        this.webviewView.webview.postMessage({ type: 'streamStart' });
+        this.webviewView.webview.postMessage({ type: 'streamChunk', content: text });
+        this.webviewView.webview.postMessage({ type: 'streamDone', model: this.currentModel });
     }
 
     // ── User message handler ─────────────────────────────────────────────────
@@ -710,6 +718,10 @@ After the write_file tool has executed, say: "Memory cleared."
                 type: 'skillActivation',
                 skill: slashMatch[1],
             });
+
+            // Hardcoded skills — handle in code, skip model entirely
+            const handled = this.handleBuiltinSkill(slashMatch[1]);
+            if (handled) { return; }
         }
 
         // Stream
